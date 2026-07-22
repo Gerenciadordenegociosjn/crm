@@ -9,7 +9,8 @@ import {
   BarChart, 
   Settings, 
   LogOut,
-  Menu
+  Menu,
+  CalendarDays
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -20,6 +21,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   const navItems = [
     { href: '/', label: 'Pipeline', icon: Briefcase },
+    { href: '/pipeline-mensal', label: 'Pipeline Mensal', icon: CalendarDays },
     { href: '/clients', label: 'Clientes', icon: Users },
     { href: '/ad-accounts', label: 'Contas de Anúncio', icon: CreditCard },
     { href: '/reports', label: 'Relatórios', icon: BarChart },

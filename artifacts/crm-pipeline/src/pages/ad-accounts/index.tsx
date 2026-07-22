@@ -23,6 +23,7 @@ const adAccountSchema = z.object({
   accountIdentifier: z.string().min(1, 'Identificador é obrigatório'),
   monthlyLimit: z.coerce.number().optional(),
   status: z.enum(['ativa', 'bloqueada', 'em_revisao', 'encerrada']),
+  rentalPeriodType: z.enum(['daily', 'weekly', 'biweekly', 'monthly']).optional().nullable(),
 });
 
 export default function AdAccountsPage() {
@@ -32,7 +33,6 @@ export default function AdAccountsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Combine filters conceptually (API might just take platform and status, wait, let's look at params)
   const listParams: any = {};
   if (platformFilter && platformFilter !== 'all') listParams.platform = platformFilter;
   if (statusFilter && statusFilter !== 'all') listParams.status = statusFilter;
@@ -48,6 +48,7 @@ export default function AdAccountsPage() {
       accountIdentifier: '',
       monthlyLimit: 0,
       status: 'em_revisao',
+      rentalPeriodType: 'monthly',
     }
   });
 
@@ -71,6 +72,16 @@ export default function AdAccountsPage() {
       case 'bloqueada': return 'destructive';
       case 'encerrada': return 'secondary';
       default: return 'warning';
+    }
+  };
+
+  const getRentalLabel = (val: string) => {
+    switch(val) {
+      case 'daily': return 'Diário';
+      case 'weekly': return 'Semanal';
+      case 'biweekly': return 'Quinzenal';
+      case 'monthly': return 'Mensal';
+      default: return '-';
     }
   };
 
@@ -131,6 +142,21 @@ export default function AdAccountsPage() {
                     </FormItem>
                   )} />
                 </div>
+                <FormField control={form.control} name="rentalPeriodType" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modalidade de Locação</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || "monthly"}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="daily">Diário</SelectItem>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="biweekly">Quinzenal</SelectItem>
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <div className="flex justify-end pt-4">
                   <Button type="submit" disabled={createAccount.isPending}>{createAccount.isPending ? 'Salvando...' : 'Salvar'}</Button>
                 </div>
@@ -173,6 +199,7 @@ export default function AdAccountsPage() {
                 <TableHead>ID / Identificador</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Plataforma</TableHead>
+                <TableHead>Modalidade</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Limite Mensal</TableHead>
                 <TableHead>Data Início</TableHead>
@@ -180,10 +207,10 @@ export default function AdAccountsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Carregando contas...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Carregando contas...</TableCell></TableRow>
               ) : accountsResponse?.data.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Nenhuma conta encontrada.</TableCell></TableRow>
-              ) : accountsResponse?.data.map((acc) => (
+                <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Nenhuma conta encontrada.</TableCell></TableRow>
+              ) : accountsResponse?.data.map((acc: any) => (
                 <TableRow key={acc.id} className="hover:bg-muted/10">
                   <TableCell className="font-mono text-sm font-semibold">{acc.accountIdentifier}</TableCell>
                   <TableCell>
@@ -192,6 +219,7 @@ export default function AdAccountsPage() {
                     ) : '-'}
                   </TableCell>
                   <TableCell>{acc.platform}</TableCell>
+                  <TableCell>{getRentalLabel(acc.rentalPeriodType)}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(acc.status)} className="uppercase text-[10px] tracking-wider">
                       {acc.status.replace('_', ' ')}

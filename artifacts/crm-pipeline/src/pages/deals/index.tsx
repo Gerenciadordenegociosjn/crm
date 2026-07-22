@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useListDeals, useCreateDeal, useListClients, DealStage, DealInputStage, getListDealsQueryKey } from '@workspace/api-client-react';
+import { useState, useEffect } from 'react';
+import { useListDeals, useCreateDeal, useListClients, useGetClient, useListUsers, DealStage, DealInputStage, getListDealsQueryKey } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,9 @@ import { Link } from 'wouter';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ import { PlusCircle, Search, ArrowRight } from 'lucide-react';
 const dealSchema = z.object({
   title: z.string().min(1, 'Título é obrigatório'),
   clientId: z.coerce.number().optional(),
+  ownerId: z.coerce.number().optional().nullable(),
   stage: z.enum(['lead_captado', 'qualificacao', 'proposta', 'negociacao', 'fechamento', 'onboarding', 'ativo', 'renovacao', 'encerrado']),
   estimatedValue: z.coerce.number().optional(),
   platform: z.string().optional(),
@@ -35,6 +36,9 @@ export default function DealsPage() {
 
   const { data: dealsResponse, isLoading } = useListDeals({ search, page, limit: 20 });
   const { data: clientsResponse } = useListClients({ limit: 100 });
+  const { data: users = [] } = useListUsers();
+  const salesUsers = users.filter(u => u.role === 'sales');
+  
   const createDeal = useCreateDeal();
 
   const form = useForm<z.infer<typeof dealSchema>>({
@@ -45,8 +49,25 @@ export default function DealsPage() {
       estimatedValue: 0,
       platform: 'Meta Ads',
       niche: '',
+      ownerId: null,
     }
   });
+
+  const selectedClientId = useWatch({ control: form.control, name: 'clientId' });
+  const { data: selectedClientData } = useGetClient(selectedClientId || 0, { 
+    query: { enabled: !!selectedClientId } 
+  });
+
+  const [autoFilled, setAutoFilled] = useState(false);
+
+  useEffect(() => {
+    if (selectedClientData?.client && (selectedClientData.client as any).assignedSalesId) {
+      form.setValue('ownerId', (selectedClientData.client as any).assignedSalesId);
+      setAutoFilled(true);
+    } else {
+      setAutoFilled(false);
+    }
+  }, [selectedClientData, form]);
 
   const onSubmit = (data: z.infer<typeof dealSchema>) => {
     createDeal.mutate({ data: data as any }, {
@@ -55,6 +76,7 @@ export default function DealsPage() {
         queryClient.invalidateQueries({ queryKey: getListDealsQueryKey() });
         setIsNewModalOpen(false);
         form.reset();
+        setAutoFilled(false);
       },
       onError: (err) => {
         toast({ title: 'Erro ao criar negócio', description: err.message, variant: 'destructive' });
@@ -69,7 +91,10 @@ export default function DealsPage() {
           <h1 className="text-3xl font-extrabold tracking-tight">Negócios</h1>
           <p className="text-muted-foreground mt-1">Lista completa de todos os negócios no sistema.</p>
         </div>
-        <Dialog open={isNewModalOpen} onOpenChange={setIsNewModalOpen}>
+        <Dialog open={isNewModalOpen} onOpenChange={(open) => {
+          setIsNewModalOpen(open);
+          if (!open) { form.reset(); setAutoFilled(false); }
+        }}>
           <DialogTrigger asChild>
             <Button><PlusCircle className="mr-2 h-4 w-4" /> Novo Negócio</Button>
           </DialogTrigger>
@@ -112,6 +137,23 @@ export default function DealsPage() {
                     </FormItem>
                   )} />
                 </div>
+                
+                <FormField control={form.control} name="ownerId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Responsável</FormLabel>
+                    <Select onValueChange={(val) => { field.onChange(parseInt(val)); setAutoFilled(false); }} value={field.value?.toString() || ""}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione o responsável" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {salesUsers.map(u => (
+                          <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {autoFilled && <FormDescription className="text-[10px] text-primary">Preenchido automaticamente pelo vendedor do cliente.</FormDescription>}
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="estimatedValue" render={({ field }) => (
                     <FormItem><FormLabel>Valor Estimado (R$)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>

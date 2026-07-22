@@ -100,8 +100,20 @@ router.post("/deals", requireAuth, async (req: any, res): Promise<void> => {
   }
 
   const d = parsed.data as any;
+
+  // Auto-populate ownerId from client's assignedSalesId when not explicitly provided
+  let resolvedOwnerId = d.ownerId ?? null;
+  if (!resolvedOwnerId && d.clientId) {
+    const [client] = await db
+      .select({ assignedSalesId: clientsTable.assignedSalesId })
+      .from(clientsTable)
+      .where(eq(clientsTable.id, d.clientId));
+    if (client?.assignedSalesId) resolvedOwnerId = client.assignedSalesId;
+  }
+
   const insertData = {
     ...d,
+    ownerId: resolvedOwnerId,
     estimatedValue: d.estimatedValue?.toString(),
     proposalValue: d.proposalValue?.toString(),
     adAccountLimit: d.adAccountLimit?.toString(),
@@ -224,9 +236,21 @@ router.patch("/deals/:id/stage", requireAuth, async (req: any, res): Promise<voi
     return;
   }
 
+  const newStage = parsed.data.stage;
+  const now = new Date();
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const stageUpdate: Record<string, unknown> = { stage: newStage, updatedAt: now };
+  if (newStage === "ativo" && !existingDeal.activeMonth) {
+    stageUpdate["activeMonth"] = ym;
+  }
+  if (newStage === "encerrado") {
+    stageUpdate["churnMonth"] = ym;
+  }
+
   const [deal] = await db
     .update(dealsTable)
-    .set({ stage: parsed.data.stage, updatedAt: new Date() })
+    .set(stageUpdate)
     .where(eq(dealsTable.id, params.data.id))
     .returning();
 
@@ -234,7 +258,7 @@ router.patch("/deals/:id/stage", requireAuth, async (req: any, res): Promise<voi
     dealId: deal.id,
     userId: req.userId ?? null,
     type: "stage_change",
-    description: parsed.data.reason ?? `Etapa alterada de ${existingDeal.stage} para ${parsed.data.stage}`,
+    description: parsed.data.reason ?? `Etapa alterada de ${existingDeal.stage} para ${newStage}`,
   });
 
   res.json(await enrichDeal(deal));

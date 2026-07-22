@@ -229,4 +229,77 @@ router.get("/dashboard/reports", requireAuth, async (req, res): Promise<void> =>
   });
 });
 
+// GET /dashboard/monthly-pipeline?year=2026&month=7
+router.get("/dashboard/monthly-pipeline", requireAuth, async (req, res): Promise<void> => {
+  const year = parseInt(req.query["year"] as string ?? `${new Date().getFullYear()}`);
+  const month = parseInt(req.query["month"] as string ?? `${new Date().getMonth() + 1}`);
+
+  if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+    res.status(400).json({ error: "Invalid year or month" });
+    return;
+  }
+
+  const ym = `${year}-${String(month).padStart(2, "0")}`;
+
+  // Active clients: deals in 'ativo' with activeMonth = ym
+  const rawActive = await db
+    .select()
+    .from(dealsTable)
+    .where(and(eq(dealsTable.stage, "ativo"), eq(dealsTable.activeMonth, ym)));
+
+  // Churn: deals in 'encerrado' with churnMonth = ym
+  const rawChurn = await db
+    .select()
+    .from(dealsTable)
+    .where(and(eq(dealsTable.stage, "encerrado"), eq(dealsTable.churnMonth, ym)));
+
+  // Batch-load client and owner names for both sets
+  const allDeals = [...rawActive, ...rawChurn];
+  const clientIds = [...new Set(allDeals.map((d) => d.clientId).filter(Boolean))] as number[];
+  const ownerIds = [...new Set(allDeals.map((d) => d.ownerId).filter(Boolean))] as number[];
+
+  const [clients, owners] = await Promise.all([
+    clientIds.length > 0
+      ? db.select({ id: clientsTable.id, name: clientsTable.name }).from(clientsTable)
+      : Promise.resolve([]),
+    ownerIds.length > 0
+      ? db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable)
+      : Promise.resolve([]),
+  ]);
+
+  const clientMap = Object.fromEntries(clients.map((c) => [c.id, c.name]));
+  const ownerMap = Object.fromEntries(owners.map((u) => [u.id, u.name]));
+
+  function enrichForMonthly(d: typeof dealsTable.$inferSelect) {
+    return {
+      ...d,
+      estimatedValue: d.estimatedValue ? Number(d.estimatedValue) : null,
+      clientName: d.clientId ? (clientMap[d.clientId] ?? null) : null,
+      ownerName: d.ownerId ? (ownerMap[d.ownerId] ?? null) : null,
+    };
+  }
+
+  const activeDeals = rawActive.map(enrichForMonthly);
+  const churnDeals = rawChurn.map(enrichForMonthly);
+
+  const totalActiveValue = activeDeals.reduce((sum, d) => sum + (d.estimatedValue ?? 0), 0);
+  const avgTicket = activeDeals.length > 0 ? totalActiveValue / activeDeals.length : 0;
+  const churnRate = activeDeals.length + churnDeals.length > 0
+    ? (churnDeals.length / (activeDeals.length + churnDeals.length)) * 100
+    : 0;
+
+  res.json({
+    year,
+    month,
+    ym,
+    activeDeals,
+    churnDeals,
+    totalActive: activeDeals.length,
+    totalChurn: churnDeals.length,
+    totalActiveValue,
+    avgTicket,
+    churnRate: Math.round(churnRate * 100) / 100,
+  });
+});
+
 export default router;

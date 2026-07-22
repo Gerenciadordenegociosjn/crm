@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useListClients, useCreateClient, getListClientsQueryKey } from '@workspace/api-client-react';
+import { useListClients, useCreateClient, getListClientsQueryKey, useListUsers } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,21 +24,32 @@ const clientSchema = z.object({
   document: z.string().optional(),
   type: z.string().optional(),
   status: z.string().default('ativo'),
+  assignedSalesId: z.coerce.number().optional().nullable(),
 });
 
 export default function ClientsPage() {
   const [search, setSearch] = useState('');
+  const [salesFilter, setSalesFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: clientsResponse, isLoading } = useListClients({ search, page, limit: 20 });
+  const { data: users = [] } = useListUsers();
+  const salesUsers = users.filter(u => u.role === 'sales');
+
+  const { data: clientsResponse, isLoading } = useListClients({ 
+    search, 
+    page, 
+    limit: 20, 
+    ...(salesFilter !== 'all' && { assigned_sales_id: salesFilter }) 
+  } as any);
+  
   const createClient = useCreateClient();
 
   const form = useForm<z.infer<typeof clientSchema>>({
     resolver: zodResolver(clientSchema),
-    defaultValues: { name: '', email: '', phone: '', document: '', type: 'Pessoa Jurídica', status: 'ativo' }
+    defaultValues: { name: '', email: '', phone: '', document: '', type: 'Pessoa Jurídica', status: 'ativo', assignedSalesId: null }
   });
 
   const onSubmit = (data: z.infer<typeof clientSchema>) => {
@@ -88,6 +100,22 @@ export default function ClientsPage() {
                     <FormItem><FormLabel>Tipo</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
+                <FormField control={form.control} name="assignedSalesId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vendedor Responsável</FormLabel>
+                    <Select value={field.value ? String(field.value) : ''} onValueChange={(v) => field.onChange(Number(v))}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Selecione um vendedor" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {salesUsers.map(user => (
+                          <SelectItem key={user.id} value={String(user.id)}>{user.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <div className="flex justify-end pt-4">
                   <Button type="submit" disabled={createClient.isPending}>{createClient.isPending ? 'Salvando...' : 'Salvar'}</Button>
                 </div>
@@ -98,8 +126,8 @@ export default function ClientsPage() {
       </div>
 
       <Card>
-        <CardHeader className="py-4 border-b">
-          <div className="flex items-center">
+        <CardHeader className="py-4 border-b flex flex-row items-center gap-4">
+          <div className="flex items-center flex-1">
             <Search className="h-4 w-4 text-muted-foreground mr-2" />
             <Input 
               placeholder="Buscar por nome, email ou telefone..." 
@@ -107,6 +135,19 @@ export default function ClientsPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-sm h-9 border-none bg-transparent shadow-none focus-visible:ring-0 px-0"
             />
+          </div>
+          <div className="w-64">
+            <Select value={salesFilter} onValueChange={setSalesFilter}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Filtrar por vendedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os vendedores</SelectItem>
+                {salesUsers.map(user => (
+                  <SelectItem key={user.id} value={String(user.id)}>{user.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -116,6 +157,7 @@ export default function ClientsPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead>Documento</TableHead>
+                <TableHead>Vendedor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Cadastrado em</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
@@ -123,10 +165,10 @@ export default function ClientsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Carregando clientes...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Carregando clientes...</TableCell></TableRow>
               ) : clientsResponse?.data.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center h-24 text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>
-              ) : clientsResponse?.data.map((client) => (
+                <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Nenhum cliente encontrado.</TableCell></TableRow>
+              ) : clientsResponse?.data.map((client: any) => (
                 <TableRow key={client.id} className="hover:bg-muted/20">
                   <TableCell className="font-semibold"><Link href={`/clients/${client.id}`}>{client.name}</Link></TableCell>
                   <TableCell>
@@ -134,6 +176,7 @@ export default function ClientsPage() {
                     <div className="text-xs text-muted-foreground">{client.phone || '-'}</div>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{client.document || '-'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{client.assignedSalesName || '-'}</TableCell>
                   <TableCell>
                     <Badge variant={client.status === 'ativo' ? 'success' : 'secondary'} className="uppercase text-[10px]">
                       {client.status || 'ativo'}

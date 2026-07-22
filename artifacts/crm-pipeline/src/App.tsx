@@ -9,6 +9,7 @@ import { Shell } from '@/components/layout/Shell';
 // Pages
 import LoginPage from '@/pages/login';
 import PipelinePage from '@/pages/pipeline';
+import MonthlyPipelinePage from '@/pages/pipeline-mensal';
 import DealDetailPage from '@/pages/deals/[id]';
 import ClientsPage from '@/pages/clients';
 import ClientDetailPage from '@/pages/clients/[id]';
@@ -47,6 +48,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={LoginPage} />
       <Route path="/" component={() => <ProtectedRoute component={PipelinePage} />} />
+      <Route path="/pipeline-mensal" component={() => <ProtectedRoute component={MonthlyPipelinePage} />} />
       <Route path="/deals/:id" component={() => <ProtectedRoute component={DealDetailPage} />} />
       <Route path="/clients" component={() => <ProtectedRoute component={ClientsPage} />} />
       <Route path="/clients/:id" component={() => <ProtectedRoute component={ClientDetailPage} />} />

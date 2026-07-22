@@ -1,10 +1,11 @@
 import { useParams } from 'wouter';
-import { useGetClient, useUpdateClient, getGetClientQueryKey } from '@workspace/api-client-react';
+import { useGetClient, useUpdateClient, getGetClientQueryKey, useListUsers } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, Briefcase, CreditCard, Mail, Phone, MapPin } from 'lucide-react';
+import { ArrowLeft, Briefcase, CreditCard, Mail, Phone, MapPin, User as UserIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -25,6 +26,7 @@ const updateClientSchema = z.object({
   type: z.string().optional(),
   status: z.string().optional(),
   notes: z.string().optional(),
+  assignedSalesId: z.coerce.number().optional().nullable(),
 });
 
 export default function ClientDetailPage() {
@@ -33,6 +35,9 @@ export default function ClientDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  const { data: users = [] } = useListUsers();
+  const salesUsers = users.filter(u => u.role === 'sales');
+
   const { data: detailData, isLoading } = useGetClient(clientId, { query: { enabled: !!clientId, queryKey: getGetClientQueryKey(clientId) } });
   const updateClient = useUpdateClient();
 
@@ -46,6 +51,7 @@ export default function ClientDetailPage() {
       type: '',
       status: '',
       notes: '',
+      assignedSalesId: null,
     }
   });
 
@@ -54,7 +60,7 @@ export default function ClientDetailPage() {
   useEffect(() => {
     if (detailData?.client && initializedForId.current !== clientId) {
       initializedForId.current = clientId;
-      const c = detailData.client;
+      const c = detailData.client as any;
       form.reset({
         name: c.name || '',
         email: c.email || '',
@@ -63,6 +69,7 @@ export default function ClientDetailPage() {
         type: c.type || '',
         status: c.status || '',
         notes: c.notes || '',
+        assignedSalesId: c.assignedSalesId || null,
       });
     }
   }, [detailData, clientId, form]);
@@ -83,7 +90,17 @@ export default function ClientDetailPage() {
     return <div className="p-8 text-center">Carregando cliente...</div>;
   }
 
-  const { client, deals, adAccounts } = detailData;
+  const { client, deals, adAccounts } = detailData as any;
+
+  const getRentalLabel = (val: string) => {
+    switch(val) {
+      case 'daily': return 'Diário';
+      case 'weekly': return 'Semanal';
+      case 'biweekly': return 'Quinzenal';
+      case 'monthly': return 'Mensal';
+      default: return '-';
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
@@ -100,6 +117,11 @@ export default function ClientDetailPage() {
               {client.status || 'Ativo'}
             </Badge>
             <span className="font-mono text-xs">{client.document}</span>
+            {client.assignedSalesName && (
+              <span className="flex items-center gap-1 text-xs border-l pl-3 ml-1">
+                <UserIcon className="h-3 w-3" /> Vendedor responsável: <strong className="text-foreground">{client.assignedSalesName}</strong>
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -124,6 +146,22 @@ export default function ClientDetailPage() {
                   )} />
                   <FormField control={form.control} name="document" render={({ field }) => (
                     <FormItem><FormLabel>CPF / CNPJ</FormLabel><FormControl><Input {...field} className="font-mono" /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="assignedSalesId" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vendedor Responsável</FormLabel>
+                      <Select value={field.value ? String(field.value) : ''} onValueChange={(v) => field.onChange(Number(v))}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {salesUsers.map(u => (
+                            <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
                   )} />
                   <FormField control={form.control} name="notes" render={({ field }) => (
                     <FormItem><FormLabel>Anotações</FormLabel><FormControl><Textarea {...field} rows={4} className="resize-none" /></FormControl><FormMessage /></FormItem>
@@ -157,7 +195,7 @@ export default function ClientDetailPage() {
                 <TableBody>
                   {deals.length === 0 ? (
                     <TableRow><TableCell colSpan={3} className="text-center py-6 text-muted-foreground">Nenhum negócio associado.</TableCell></TableRow>
-                  ) : deals.map(deal => (
+                  ) : deals.map((deal: any) => (
                     <TableRow key={deal.id}>
                       <TableCell className="font-medium text-primary"><Link href={`/deals/${deal.id}`}>{deal.title}</Link></TableCell>
                       <TableCell><Badge variant="outline" className="text-[10px]">{deal.stage.replace('_', ' ')}</Badge></TableCell>
@@ -180,17 +218,19 @@ export default function ClientDetailPage() {
                   <TableRow>
                     <TableHead>Identificador</TableHead>
                     <TableHead>Plataforma</TableHead>
+                    <TableHead>Modalidade</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Limite/Mês</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {adAccounts.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">Nenhuma conta de anúncio associada.</TableCell></TableRow>
-                  ) : adAccounts.map(acc => (
+                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Nenhuma conta de anúncio associada.</TableCell></TableRow>
+                  ) : adAccounts.map((acc: any) => (
                     <TableRow key={acc.id}>
                       <TableCell className="font-mono text-xs">{acc.accountIdentifier}</TableCell>
                       <TableCell>{acc.platform}</TableCell>
+                      <TableCell className="text-sm">{getRentalLabel(acc.rentalPeriodType)}</TableCell>
                       <TableCell>
                         <Badge variant={acc.status === 'ativa' ? 'success' : acc.status === 'bloqueada' ? 'destructive' : 'warning'} className="text-[10px] uppercase">
                           {acc.status}

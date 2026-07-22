@@ -32,6 +32,9 @@ export const dealsTable = pgTable("deals", {
   // Ativo / Renovação
   rentalStatus: text("rental_status"),
   contractEndDate: date("contract_end_date", { mode: "string" }),
+  // Pipeline mensal
+  activeMonth: text("active_month"),  // "YYYY-MM" – preenchido ao entrar em 'ativo'
+  churnMonth: text("churn_month"),    // "YYYY-MM" – preenchido ao entrar em 'encerrado'
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(() => new Date()),
 });

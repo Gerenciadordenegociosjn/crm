@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, clientsTable } from "@workspace/db";
-import { eq, ilike, or, sql } from "drizzle-orm";
+import { db, clientsTable, usersTable } from "@workspace/db";
+import { eq, ilike, or, sql, and } from "drizzle-orm";
 import {
   CreateClientBody,
   UpdateClientBody,
@@ -15,6 +15,16 @@ import { adAccountsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
+async function enrichClient(client: typeof clientsTable.$inferSelect) {
+  const [salesUser] = client.assignedSalesId
+    ? await db
+        .select({ name: usersTable.name })
+        .from(usersTable)
+        .where(eq(usersTable.id, client.assignedSalesId))
+    : [null];
+  return { ...client, assignedSalesName: salesUser?.name ?? null };
+}
+
 router.get("/clients", requireAuth, async (req, res): Promise<void> => {
   const query = ListClientsQueryParams.safeParse(req.query);
   if (!query.success) {
@@ -22,7 +32,7 @@ router.get("/clients", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const { search, status, page = 1, limit = 20 } = query.data;
+  const { search, status, assigned_sales_id, page = 1, limit = 20 } = query.data as any;
   const offset = (page - 1) * limit;
 
   const conditions: any[] = [];
@@ -35,24 +45,38 @@ router.get("/clients", requireAuth, async (req, res): Promise<void> => {
       ),
     );
   }
-  if (status) {
-    conditions.push(eq(clientsTable.status, status));
-  }
+  if (status) conditions.push(eq(clientsTable.status, status));
+  if (assigned_sales_id) conditions.push(eq(clientsTable.assignedSalesId, Number(assigned_sales_id)));
 
-  const whereClause = conditions.length > 0 ? conditions[0] : undefined;
+  const whereClause =
+    conditions.length === 0
+      ? undefined
+      : conditions.length === 1
+        ? conditions[0]
+        : and(...conditions);
 
   const [data, countResult] = await Promise.all([
-    db
-      .select()
-      .from(clientsTable)
-      .where(whereClause)
-      .orderBy(clientsTable.name)
-      .limit(limit)
-      .offset(offset),
+    db.select().from(clientsTable).where(whereClause).orderBy(clientsTable.name).limit(limit).offset(offset),
     db.select({ count: sql<number>`count(*)` }).from(clientsTable).where(whereClause),
   ]);
 
-  res.json({ data, total: Number(countResult[0]?.count ?? 0), page, limit });
+  // Batch enrich with assigned sales names
+  const salesIds = [...new Set(data.map((c) => c.assignedSalesId).filter(Boolean))] as number[];
+  const salesUsers =
+    salesIds.length > 0
+      ? await db
+          .select({ id: usersTable.id, name: usersTable.name })
+          .from(usersTable)
+          .where(sql`id = ANY(${salesIds})`)
+      : [];
+  const salesMap = Object.fromEntries(salesUsers.map((u) => [u.id, u.name]));
+
+  const enriched = data.map((c) => ({
+    ...c,
+    assignedSalesName: c.assignedSalesId ? (salesMap[c.assignedSalesId] ?? null) : null,
+  }));
+
+  res.json({ data: enriched, total: Number(countResult[0]?.count ?? 0), page, limit });
 });
 
 router.post("/clients", requireAuth, async (req, res): Promise<void> => {
@@ -62,8 +86,8 @@ router.post("/clients", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const [client] = await db.insert(clientsTable).values(parsed.data).returning();
-  res.status(201).json(client);
+  const [client] = await db.insert(clientsTable).values(parsed.data as any).returning();
+  res.status(201).json(await enrichClient(client));
 });
 
 router.get("/clients/:id", requireAuth, async (req, res): Promise<void> => {
@@ -84,7 +108,7 @@ router.get("/clients/:id", requireAuth, async (req, res): Promise<void> => {
     db.select().from(adAccountsTable).where(eq(adAccountsTable.clientId, params.data.id)).orderBy(adAccountsTable.createdAt),
   ]);
 
-  res.json({ client, deals, adAccounts });
+  res.json({ client: await enrichClient(client), deals, adAccounts });
 });
 
 router.patch("/clients/:id", requireAuth, async (req, res): Promise<void> => {
@@ -102,7 +126,7 @@ router.patch("/clients/:id", requireAuth, async (req, res): Promise<void> => {
 
   const [client] = await db
     .update(clientsTable)
-    .set(parsed.data)
+    .set(parsed.data as any)
     .where(eq(clientsTable.id, params.data.id))
     .returning();
 
@@ -111,7 +135,7 @@ router.patch("/clients/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(client);
+  res.json(await enrichClient(client));
 });
 
 router.delete("/clients/:id", requireAuth, async (req, res): Promise<void> => {
