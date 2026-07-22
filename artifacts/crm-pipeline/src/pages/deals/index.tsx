@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useListDeals, useCreateDeal, useListClients, useGetClient, useListUsers, DealStage, DealInputStage, getListDealsQueryKey } from '@workspace/api-client-react';
+import { useListDeals, useCreateDeal, useListClients, useGetClient, useListUsers, DealStage, DealInputStage, getListDealsQueryKey, getGetClientQueryKey } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -55,7 +55,7 @@ export default function DealsPage() {
 
   const selectedClientId = useWatch({ control: form.control, name: 'clientId' });
   const { data: selectedClientData } = useGetClient(selectedClientId || 0, { 
-    query: { enabled: !!selectedClientId } 
+    query: { enabled: !!selectedClientId, queryKey: getGetClientQueryKey(selectedClientId || 0) } 
   });
 
   const [autoFilled, setAutoFilled] = useState(false);
