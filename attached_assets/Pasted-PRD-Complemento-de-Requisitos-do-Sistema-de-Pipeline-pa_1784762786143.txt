@@ -1,0 +1,222 @@
+PRD – Complemento de Requisitos do Sistema de Pipeline para Locação de Contas de Anúncio
+Este documento complementa o PRD principal já definido. Ele adiciona três requisitos específicos:
+
+Vínculo de clientes a vendedores.
+Modalidades de locação das contas (dia/semana/quinzenal/mês).
+Estrutura de pipeline mensal (visão por mês, com foco em clientes ativos e churn).
+ETAPA 1 – Vínculo de Clientes a Vendedores
+1.1. Visão
+Cada cliente deve estar ligado a um vendedor específico, e os leads/negócios (deals) criados para aquele cliente devem, por padrão, ser atribuídos ao vendedor responsável.
+
+1.2. Requisitos Funcionais
+Ao criar um perfil de vendedor (usuário com role sales):
+
+O sistema deve permitir vincular clientes a esse vendedor.
+Ex.: campo assigned_sales_id no cliente.
+Ao criar um novo lead/deal:
+
+Se o usuário escolher um cliente que já está vinculado a um vendedor:
+O sistema deve preencher o owner_id do deal automaticamente com o vendedor vinculado ao cliente.
+Se o lead for criado via integração WhatsApp:
+Ao criar o cliente:
+O sistema pode:
+Atribuir o cliente a um vendedor padrão (por exemplo, “Inbound”); ou
+Deixar sem vendedor e ser ajustado manualmente (decisão de negócio).
+Depois que um vendedor é definido para o cliente, novos deals desse cliente vêm com owner_id = vendedor.
+Na tela de cliente:
+
+Deve existir um campo visível: “Vendedor responsável” (dropdown que lista usuários sales).
+O admin pode editar esse campo.
+Vendedor pode, opcionalmente, ver seus próprios clientes (listagem filtrada).
+Na tela de pipeline:
+
+Filtro por vendedor:
+Mostrar apenas deals cujo owner_id é o vendedor logado.
+Admin pode alternar entre vendedores e ver o funil de cada um.
+1.3. Modelagem de Dados – Complemento
+Na tabela clients:
+
+Adicionar campo:
+assigned_sales_id (FK → users.id, com role = sales).
+Comportamento:
+
+Quando assigned_sales_id está definido:
+owner_id de novos deals relacionados ao cliente deve, por padrão, receber esse valor (pode ainda ser manualmente alterado pelo admin, se necessário).
+ETAPA 2 – Modalidades de Locação de Contas (Período)
+2.1. Visão
+As contas de anúncio podem ser alugadas com diferentes períodos de contratação:
+
+Diária
+Semanal
+Quinzenal
+Mensal
+Isso deve estar representado no sistema tanto nas contas de anúncio quanto, se desejado, nos deals/contratos de locação.
+
+2.2. Requisitos Funcionais
+Na tabela e tela de contas de anúncio (ad_accounts):
+
+Adicionar campo:
+rental_period_type (tipo de período):
+Valores possíveis: "daily", "weekly", "biweekly" (quinzenal), "monthly".
+Opcionalmente:
+rental_period_value (numérico) – número de dias correspondente, se desejável para cálculo (ex.: daily=1, weekly=7, biweekly=15, monthly=30; pode ser logicamente inferido sem esse campo).
+Na criação/edição de conta de anúncio:
+
+O usuário deve poder escolher uma dessas modalidades em um dropdown:
+“Diário”
+“Semanal”
+“Quinzenal”
+“Mensal”
+Combinar com:
+start_date – data de início da locação.
+end_date – pode ser:
+Calculado a partir do período, ou
+Definido manualmente (dependendo da modelagem; no mínimo, permitir salvar start_date e end_date).
+Na tela de detalhes do cliente:
+
+Ao listar as contas de anúncio:
+Exibir também o tipo de período (diário/semanal/quinzenal/mensal).
+Possível uso futuro (a ser considerado pelo dev, mas não obrigatório no MVP):
+
+Cálculo de faturamento/renovação baseado no tipo de período.
+Relatórios de quantas contas estão em cada modalidade.
+2.3. Modelagem de Dados – Complemento
+Na tabela ad_accounts:
+
+Adicionar campo:
+rental_period_type (string ou enum):
+Exemplo enum: daily, weekly, biweekly, monthly.
+ETAPA 3 – Pipeline Mensal (Visão por Mês, Clientes Ativos e Churn)
+3.1. Visão
+O pipeline deve ser organizado por mês.
+Ou seja:
+
+Em cada mês, existem oportunidades (deals), mas:
+A tabela/visão principal que deve ser carregada mês a mês é de:
+Clientes ativos
+Clientes em churn (encerrados)
+Você quer uma estrutura onde:
+
+A visão principal de “performance mensal” foca em:
+Quantos clientes ativos existem no mês.
+Quantos clientes entraram em churn naquele mês.
+3.2. Requisitos Funcionais
+Marcação temporal nos deals e clientes ativos/churn:
+
+Cada deal já possui created_at e updated_at.
+Para a lógica mensal, é importante que:
+Em deals/contratos que estão em Cliente Ativo:
+Haja referência ao período/mês em que o cliente está ativo.
+Em churn (Encerrado / Churn):
+Haja indicação do mês em que aconteceu o churn.
+Para isso, podem ser criados campos adicionais:
+
+Em deals (ou tabela adicional de status mensal, a critério técnico):
+
+active_month (opcional, mas útil):
+
+Poderia ser um campo que guarda um mês/ano (ex.: 2026-07) quando o deal entra em “Cliente Ativo”.
+
+churn_month:
+
+Campo que guarda o mês/ano em que o deal muda para “Encerrado / Churn”.
+
+Visão mensal de pipeline:
+
+Criar uma tela ou filtro de “Visão por mês”, que:
+
+Ao selecionar um mês/ano (ex.: Julho 2026):
+Mostre:
+Clientes ativos naquele mês:
+Derivado dos deals em etapa ativo (Cliente Ativo), considerando:
+Data de atividade ou active_month.
+O sistema deve listar:
+Cliente.
+Plataforma(s).
+Valor previsto.
+Vendedor responsável.
+Clientes churn naquele mês:
+Derivado dos deals que passaram para etapa encerrado (Churn) com churn_month = mês selecionado.
+Listar:
+Cliente.
+Motivo de churn (se houver campo).
+Vendedor responsável.
+Regra: “Única tabela que deve ser carregada mês a mês”
+
+Interpretação prática para o dev:
+
+O sistema pode ter várias tabelas, mas a visão que deve ser resetada ou recalculada por mês é essencialmente:
+
+A tabela/visão de clientes ativos por mês.
+A tabela/visão de clientes churn por mês.
+Implementação sugerida:
+
+Criar uma view ou endpoint de relatório mensal que:
+
+Recebe parâmetros: year, month.
+Retorna:
+Lista de deals/clients com stage = ativo relevantes para aquele mês.
+Lista de deals/clients com stage = encerrado (churn) relevantes para aquele mês.
+Não é necessário “apagar” dados antigos, apenas filtrar por mês.
+
+Fluxo de uso para pipeline mensal:
+
+Usuário seleciona o mês (ex.: um dropdown com “Julho 2026”).
+Sistema:
+Calcula quais clientes estavam ativos naquele mês:
+Deals em Cliente Ativo, levando em conta datas (ex.: start_date da conta, contract_end_date etc.).
+Calcula quais clientes tiveram churn naquele mês:
+Deals que mudaram para Encerrado / Churn naquele período.
+Exibe isso em uma tela de resumo, que pode incluir:
+Contagem de clientes ativos.
+Contagem de churn.
+Taxa de churn (%).
+Ticket médio de ativos.
+3.3. Modelagem de Dados – Complemento
+Na tabela deals (opção simples):
+
+Adicionar campos:
+active_month (string ou tipo data/mês; pode ser normalizado como primeiro dia do mês).
+churn_month (string ou tipo data/mês).
+Regra de preenchimento:
+
+Quando um deal entra na etapa ativo (Cliente Ativo):
+Preencher active_month com o mês/ano atual.
+Quando um deal entra em encerrado (Churn):
+Preencher churn_month com o mês/ano atual.
+Obs.: Se o dev preferir, pode utilizar apenas datas (updated_at) e fazer a agregação por mês em queries, sem campos extras, mas o PRD indica claramente a necessidade de visualização mensal.
+
+RESUMO EM BULLETS DO COMPLEMENTO (PARA O REPLIT)
+Vínculo cliente–vendedor:
+
+Cada cliente deve ter um campo assigned_sales_id (FK para users com role sales).
+Ao criar um deal para um cliente com assigned_sales_id, o owner_id do deal deve ser automaticamente o vendedor responsável.
+Na tela do cliente, mostrar e permitir definir/editar o “Vendedor responsável”.
+Pipeline e listagens devem permitir filtro por vendedor.
+Modalidades de locação de contas:
+
+As contas de anúncio (ad_accounts) devem incluir um campo rental_period_type com valores:
+daily (diário)
+weekly (semanal)
+biweekly (quinzenal)
+monthly (mensal)
+Na criação/edição de conta, o usuário escolhe a modalidade em dropdown.
+Exibir o tipo de período na listagem de contas e na tela do cliente.
+Pipeline mensal (foco em ativos e churn):
+
+Criar lógica/visão de pipeline por mês, onde a principal análise é:
+Clientes ativos naquele mês.
+Clientes churn naquele mês.
+Nos deals, adicionar campos (se o dev optar por dados explícitos):
+active_month – mês/ano em que o deal entrou em “Cliente Ativo”.
+churn_month – mês/ano em que o deal entrou em “Encerrado / Churn”.
+Ao mover um deal para:
+ativo → preencher active_month com o mês atual.
+encerrado → preencher churn_month com o mês atual.
+Criar uma tela ou endpoint de relatório mensal que:
+Recebe year e month.
+Retorna:
+Lista de clientes/deals ativos naquele mês.
+Lista de churn daquele mês.
+Contagens e métricas (ex.: taxa de churn, ticket médio).
+Esse complemento deve ser integrado ao PRD principal já montado, mantendo coerência com as tabelas users, clients, deals e ad_accounts descritas anteriormente.

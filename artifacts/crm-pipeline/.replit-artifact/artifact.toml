@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "CRM Pipeline – Locação de Contas de Anúncio"
+version = "1.0.0"
+id = "artifacts/crm-pipeline"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22600
+
+[services.development]
+run = "pnpm --filter @workspace/crm-pipeline run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/crm-pipeline", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/crm-pipeline/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22600"
+BASE_PATH = "/"

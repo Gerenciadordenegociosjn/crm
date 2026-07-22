@@ -1,0 +1,511 @@
+PRD – Sistema Web de Pipeline para Locação de Contas de Anúncio + Integração WhatsApp/IA
+ETAPA 1 – Visão Geral do Produto
+Nome provisório:
+Sistema de CRM/Pipeline para Locação de Contas de Anúncio
+
+Objetivo principal:
+Desenvolver um aplicativo web (site) que:
+
+Gerencie o fluxo completo de locação de contas de anúncio em um pipeline visual (Kanban).
+Permita acesso individual para cada membro da equipe (login por usuário).
+Modele clientes, negócios (deals) e contas de anúncio de forma estruturada.
+Tenha integração com WhatsApp + IA, para criar e atualizar leads automaticamente a partir das conversas.
+Problema atual:
+
+Leads e propostas gerenciados de forma desorganizada (WhatsApp, planilhas, mensagens dispersas).
+Falta de visão de funil: não se sabe facilmente quem está em qual etapa, o que foi fechado, o que está ativo.
+Processos manuais para registrar clientes e contas de anúncio.
+Resultado esperado:
+
+Um sistema centralizado onde:
+Todos os leads e clientes são registrados.
+O pipeline de locação é claramente visualizado.
+A integração com WhatsApp alimenta automaticamente o CRM.
+A equipe ganha produtividade e controle.
+ETAPA 2 – Escopo Funcional do Sistema Web (CRM + Pipeline)
+2.1. Autenticação e Usuários
+Requisitos:
+
+Login por e-mail + senha.
+Armazenamento de senha com hash seguro (ex.: bcrypt).
+Perfis de usuário:
+Admin
+Criar, editar, desativar usuários.
+Ver e editar todos os negócios, clientes e contas.
+Acessar configurações gerais do sistema.
+Colaborador (Sales/Atendimento)
+Ver seus negócios (owner) e, opcionalmente, todos – regra a definir, mínimo: ver próprios.
+Criar novos negócios (deals).
+Criar e editar clientes associados aos seus negócios.
+Comportamento:
+
+Usuário faz login → sistema retorna token (JWT) ou sessão.
+Rotas protegidas exigem token válido.
+Usuário com role = admin tem acesso ampliado; role = sales tem acesso limitado.
+2.2. Pipeline Kanban (Tela Principal)
+Objetivo: Ter uma tela principal com o pipeline de locação em formato Kanban, com drag & drop.
+
+Etapas do pipeline (colunas):
+
+Lead Captado
+Qualificação Inicial
+Apresentação da Proposta
+Negociação / Ajustes
+Fechamento / Aceite
+Onboarding da Conta
+Cliente Ativo
+Renovação / Upgrade
+Encerrado / Churn
+Requisitos da tela:
+
+Cada coluna representa uma etapa (stage).
+Cada card representa um negócio (deal).
+Cards devem exibir:
+Título do negócio (ex.: “Locação Meta – Agência XPTO”).
+Nome do cliente.
+Plataforma principal (Meta, Google, TikTok etc.).
+Valor previsto (estimated_value).
+Responsável (owner – usuário).
+Funcionalidades:
+
+Drag & drop:
+Arrastar um card de uma coluna para outra atualiza o stage do deal no banco.
+Registrar atividade de mudança de etapa.
+Filtros:
+Por responsável (owner_id).
+Por plataforma (Meta/Google/TikTok etc.).
+Opcional: por etapa.
+Busca:
+Campo de busca por texto (título do deal ou nome do cliente).
+2.3. Tela de Detalhes do Negócio (Deal)
+Ao clicar em um card do pipeline, abrir uma página de detalhes do negócio.
+
+Campos do negócio (deal):
+
+Gerais:
+
+title – título.
+client_id – referência ao cliente.
+owner_id – usuário responsável.
+stage – etapa atual (enum).
+platform – Meta, Google, TikTok, etc.
+estimated_value – valor previsto.
+niche – nicho do produto/serviço.
+risk_level – baixo, médio, alto.
+lead_source – ex.: Ads, Orgânico, Indicação, WhatsApp.
+created_at, updated_at.
+Campos por etapa (não precisam ser tecnicamente bloqueados por etapa no MVP, mas devem existir):
+
+Qualificação Inicial
+
+has_block_history – sim/não.
+
+block_description – texto com detalhes dos bloqueios anteriores.
+
+Observações de risco – texto livre.
+
+Apresentação da Proposta
+
+proposal_value – valor proposto.
+
+proposal_conditions – texto com condições.
+
+proposal_term – prazo de contrato proposto.
+
+Fechamento / Aceite
+
+acceptance_date – data de aceite.
+
+payment_method – pix, boleto, cartão, outro.
+
+terms_accepted – sim/não.
+
+Onboarding da Conta
+
+ad_account_id – vínculo com tabela ad_accounts (se já criada).
+
+ad_account_created – sim/não.
+
+ad_account_limit – limite de orçamento.
+
+first_campaign_active – sim/não.
+
+Cliente Ativo / Renovação
+
+rental_status – ativo estável / ativo com risco / ativo com potencial de aumento.
+
+contract_end_date – data prevista de fim de contrato.
+
+Histórico / Atividades (timeline):
+
+Registrar eventos ligados ao negócio:
+Mudança de etapa (stage_change).
+Notas internas (note).
+Contatos com cliente (contact: ligação, WhatsApp, e-mail, reunião).
+Cada activity contém:
+deal_id
+user_id
+type (note, stage_change, contact)
+description
+created_at
+A tela deve mostrar as atividades em ordem cronológica (mais recente primeiro).
+
+2.4. Tela de Clientes
+Listagem de clientes:
+
+Campos:
+Nome.
+Tipo (agência, infoprodutor, ecommerce, etc.).
+Contato principal.
+Telefone.
+E-mail.
+Documento (CPF/CNPJ).
+Status (opcional: ativo, em pausa, encerrado).
+Funcionalidades:
+
+Criar cliente.
+Editar cliente.
+(Excluir pode ser opcional; no mínimo, marcar como inativo.)
+Tela de detalhes do cliente:
+
+Mostrar:
+Dados cadastrais (nome, tipo, contato, telefone, e-mail, documento, observações).
+Lista de negócios (deals) associados ao cliente.
+Lista de contas de anúncio (ad_accounts) associadas ao cliente.
+2.5. Gestão de Contas de Anúncio (Ad Accounts)
+Tabela de contas de anúncio (ad_accounts):
+
+Campos:
+
+client_id – referência ao cliente.
+platform – Meta, Google, TikTok etc.
+account_identifier – ID/nome da conta de anúncio.
+monthly_limit – limite mensal de investimento.
+status – ativa, bloqueada, em revisão, encerrada.
+start_date – data de início da locação.
+end_date – data de fim da locação (nullable).
+Tela:
+
+Listagem geral:
+Filtro por cliente, plataforma e status.
+Na tela do cliente:
+Mostrar as contas de anúncio vinculadas àquele cliente.
+2.6. Relatórios Simples
+Página de “Relatórios” ou “Dashboard”:
+
+No MVP, pode ser uma página simples com dados em texto/tabelas:
+
+Resumo de pipeline:
+
+Quantidade de deals em cada etapa (Lead Captado, Qualificação, etc.).
+Fechamentos por período:
+
+Número de deals que chegaram à etapa “Fechamento / Aceite” ou “Cliente Ativo” em um intervalo de datas.
+Somatório de estimated_value desses deals.
+Ticket médio:
+
+Média de estimated_value dos deals fechados em um período.
+Motivos de churn (se implementado campo de motivo em “Encerrado / Churn”):
+
+Contagem por motivo: parou de anunciar, falta de caixa, foi para outro fornecedor, etc.
+2.7. Configurações (Área de Admin)
+Admin pode:
+
+Gerenciar usuários:
+Criar novos usuários (nome, e-mail, senha inicial, role).
+Editar (nome, e-mail, role).
+Ativar/desativar usuários (campo active).
+Gerenciar pipeline:
+No MVP, as etapas podem ser fixas em código.
+Se viável, permitir renomear etapas e alterar ordem em tela (não obrigatório na primeira versão).
+ETAPA 3 – Requisitos Não Funcionais
+3.1. Stack Tecnológica (sugestão)
+Front-end:
+
+React ou Next.js.
+Componente de Kanban (drag & drop), ex.: react-beautiful-dnd ou similar.
+Back-end:
+
+Node.js com Express ou NestJS.
+API REST.
+Banco de dados:
+
+PostgreSQL (preferência) ou MySQL.
+Autenticação:
+
+JWT (Bearer token).
+Senhas com hash (bcrypt).
+3.2. Segurança
+Senhas criptografadas, nunca armazenar em texto plano.
+Rotas protegidas exigem token JWT válido.
+Permissões baseadas em role (admin / sales).
+Endpoints de integração (WhatsApp) protegidos com chave de integração separada (ver Etapa 4).
+3.3. Performance
+Suporte a:
+Dezenas de usuários.
+Centenas/milhares de deals e clientes.
+Uso de paginação em listagens (clientes, deals, activities) para evitar sobrecarga.
+Consultas otimizadas para contar deals por etapa.
+3.4. UX/UI
+Interface responsiva (prioridade desktop; mobile básico se possível).
+Pipeline intuitivo:
+Feedback visual ao movimentar card.
+Indicação clara de etapa.
+Mensagens de erro claras e notificações de sucesso (ex.: “Negócio salvo”, “Etapa atualizada”).
+ETAPA 4 – Modelagem de Dados
+4.1. Tabela users
+id (PK)
+name (string)
+email (string, unique)
+password_hash (string)
+role (string: admin ou sales)
+active (boolean)
+4.2. Tabela clients
+id (PK)
+name (string)
+type (string: agência, infoprodutor, ecommerce, etc.)
+contact_name (string)
+phone (string)
+email (string)
+document (string: CPF/CNPJ)
+notes (text)
+4.3. Tabela deals
+id (PK)
+title (string)
+client_id (FK → clients.id)
+owner_id (FK → users.id)
+stage (enum/string com valores:
+lead_captado, qualificacao, proposta, negociacao, fechamento, onboarding, ativo, renovacao, encerrado)
+platform (string: Meta, Google, TikTok etc.)
+estimated_value (decimal)
+niche (string)
+risk_level (string: baixo, médio, alto)
+lead_source (string: Ads, Orgânico, Indicação, WhatsApp etc.)
+Outros campos específicos por etapa (podem ser colunas extras ou campos JSON, conforme decisão técnica):
+has_block_history (boolean)
+block_description (text)
+proposal_value (decimal)
+proposal_conditions (text)
+proposal_term (string)
+acceptance_date (timestamp/date)
+payment_method (string)
+terms_accepted (boolean)
+ad_account_id (FK → ad_accounts.id, nullable)
+ad_account_created (boolean)
+ad_account_limit (decimal)
+first_campaign_active (boolean)
+rental_status (string)
+contract_end_date (date)
+created_at (timestamp)
+updated_at (timestamp)
+4.4. Tabela ad_accounts
+id (PK)
+client_id (FK → clients.id)
+platform (string)
+account_identifier (string)
+monthly_limit (decimal)
+status (string: ativa, bloqueada, em revisão, encerrada)
+start_date (date)
+end_date (date, nullable)
+4.5. Tabela activities
+id (PK)
+deal_id (FK → deals.id)
+user_id (FK → users.id, pode ser nulo para atividades da integração)
+type (string: note, stage_change, contact)
+description (text)
+created_at (timestamp)
+ETAPA 5 – Integração com WhatsApp + IA
+5.1. Visão
+Objetivo da integração:
+
+Ter um número de WhatsApp receptivo onde:
+Leads e clientes conversam com uma IA/bot.
+A IA coleta dados (nome, nicho, investimento, histórico de bloqueios, etc.).
+A IA envia dados estruturados para o sistema via API.
+O sistema cria/atualiza clientes e deals e pode mover etapas do pipeline.
+5.2. Canal de WhatsApp
+Usar WhatsApp Business API (Cloud API) ou provedor similar (Twilio, Zenvia, etc.).
+Número será utilizado como:
+Canal principal de contato para leads.
+Canal de suporte/atualização para clientes atuais.
+5.3. Bot / IA no WhatsApp (lado externo ao sistema)
+O PRD foca no que o sistema precisa oferecer para integração. A IA/bot deve:
+
+Fazer perguntas estruturadas:
+Nome/empresa.
+Nicho do produto/serviço.
+Plataformas onde já anuncia (Meta, Google, TikTok etc.).
+Investimento mensal aproximado.
+Histórico de bloqueio de contas de anúncio (sim/não + descrição).
+Ao final, montar um JSON e chamar endpoints do sistema (ver abaixo).
+5.4. Endpoints de Integração (lado do sistema)
+Todos endpoints de integração devem:
+
+Estar sob prefixo: /integrations/whatsapp/...
+Ser protegidos com uma chave de integração (por exemplo via header X-Integration-Key).
+5.4.1. Endpoint – Criar lead via WhatsApp
+POST /integrations/whatsapp/leads
+
+Entrada (JSON):
+
+json
+Copiar
+
+{
+  "external_id": "whatsapp:+5511999999999",
+  "name": "Agência XPTO",
+  "phone": "+55 11 99999-9999",
+  "niche": "Infoproduto de marketing",
+  "platforms": ["Meta", "Google"],
+  "estimated_investment": 10000,
+  "has_block_history": true,
+  "block_description": "Conta Meta bloqueada 2x",
+  "intent": "novo_lead"
+}
+Comportamento:
+
+Verificar se já existe cliente com phone ou external_id.
+
+Se existir:
+Atualizar dados do cliente, se necessário.
+Criar novo deal associado a esse cliente.
+Se não existir:
+Criar novo cliente com os dados fornecidos.
+Criar novo deal associado ao novo cliente.
+Criar deal com:
+
+title: “Lead WhatsApp – [nome/niche]”
+client_id: cliente.
+owner_id: nulo ou ID de usuário padrão (ex.: “Integração”).
+stage: lead_captado.
+platform: primeira plataforma de platforms ou texto concatenado.
+estimated_value: estimated_investment ou 0.
+niche: valor recebido.
+lead_source: “WhatsApp”.
+has_block_history, block_description.
+Registrar activity:
+
+type: contact.
+description: “Lead criado via WhatsApp pela IA. Dados: [resumo]”.
+user_id: ID técnico ou nulo.
+Retornar JSON com cliente e deal criados.
+
+5.4.2. Endpoint – Atualizar etapa de negócio via WhatsApp
+POST /integrations/whatsapp/deals/update-stage
+
+Entrada:
+
+json
+Copiar
+
+{
+  "deal_id": 123,
+  "new_stage": "negociacao",
+  "reason": "Cliente pediu proposta detalhada e está analisando",
+  "trigger": "bot"
+}
+Comportamento:
+
+Validar deal_id.
+Atualizar stage do deal para new_stage.
+Atualizar updated_at.
+Registrar activity:
+type: stage_change
+description: reason (ex.: “Atualizado via WhatsApp: cliente em negociação.”)
+user_id: ID técnico ou nulo.
+Retorno:
+
+Deal atualizado.
+5.4.3. Endpoint – Atualizar dados de cliente via WhatsApp
+POST /integrations/whatsapp/clients/update
+
+Entrada:
+
+json
+Copiar
+
+{
+  "phone": "+55 11 99999-9999",
+  "name": "Agência XPTO Marketing",
+  "niche": "Lançamentos digitais",
+  "has_block_history": true,
+  "block_description": "Meta bloqueada por política de anúncios",
+  "status": "ativo"
+}
+Comportamento:
+
+Buscar cliente por phone.
+Se existir:
+Atualizar campos fornecidos.
+Opcional: vincular activity ao último deal ativo daquele cliente.
+Se não existir:
+Retornar erro específico ou criar novo cliente (decisão de negócio; sugerido: erro, para IA ajustar fluxo).
+5.4.4. Endpoint – Consultar cliente por telefone (para IA entender contexto)
+GET /integrations/whatsapp/client-by-phone?phone=+5511999999999
+
+Retorno:
+
+json
+Copiar
+
+{
+  "client": {
+    "id": 10,
+    "name": "Agência XPTO",
+    "phone": "+55 11 99999-9999",
+    "status": "ativo"
+  },
+  "deals": [
+    {
+      "id": 123,
+      "stage": "ativo",
+      "platform": "Meta",
+      "estimated_value": 8000,
+      "created_at": "...",
+      "updated_at": "..."
+    }
+  ]
+}
+A IA usa isso para decidir se cria novo lead, atualiza estágio ou apenas registra um contato.
+
+ETAPA 6 – Fluxos de Uso (User Flows)
+6.1. Fluxo – Usuário humano
+Faz login no sistema.
+Vê pipeline em Kanban.
+Cria leads manualmente quando necessário.
+Arrasta cards para mudar etapas conforme contato com o cliente.
+Registra notas/atividades relevantes.
+Acompanha clientes e contas de anúncio nas telas específicas.
+Consulta relatórios para entender performance.
+6.2. Fluxo – IA no WhatsApp (novo lead)
+Lead manda mensagem para o número de WhatsApp.
+IA faz perguntas (nome, nicho, investimento, etc.).
+IA monta JSON e chama POST /integrations/whatsapp/leads.
+Sistema cria:
+Cliente.
+Deal em lead_captado.
+Usuário humano entra no sistema e vê o card novo na coluna “Lead Captado”.
+6.3. Fluxo – IA no WhatsApp (cliente existente)
+Cliente manda mensagem para o mesmo número.
+IA chama GET /integrations/whatsapp/client-by-phone.
+Se cliente existe:
+IA identifica se tem deal ativo.
+Pode:
+Registrar contato (via atualizar cliente ou criar activity).
+Atualizar etapa de deal (update-stage) se conversa indicar mudança (ex.: passou para negociação).
+Sistema atualiza as informações e a equipe vê o pipeline refletindo a nova etapa.
+ETAPA 7 – Critérios de Sucesso
+Sistema web funcionando com:
+
+Login por usuário.
+Pipeline visual (Kanban) com etapas definidas.
+Cadastro e gestão de clientes e contas de anúncio.
+Timeline de atividades por negócio.
+Relatórios básicos operando.
+Integração com WhatsApp:
+
+Leads que interagem apenas via WhatsApp são automaticamente cadastrados como:
+Cliente.
+Deal em “Lead Captado”.
+IA consegue atualizar estágio de deals através dos endpoints de integração.
+Equipe consegue ver claramente quem veio do WhatsApp (lead_source = WhatsApp).

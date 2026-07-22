@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CRM Pipeline - Locação de Contas de Anúncio
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: clients
+    description: Client management
+  - name: deals
+    description: Deal management
+  - name: ad-accounts
+    description: Ad account management
+  - name: activities
+    description: Activity timeline
+  - name: dashboard
+    description: Dashboard & reports
+  - name: integrations
+    description: WhatsApp/AI integrations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +40,1557 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # Auth
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # Users
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # Clients
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List clients
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientListResponse"
+
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a new client
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  /clients/{id}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get a client by ID with their deals and ad accounts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update a client
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientUpdate"
+      responses:
+        "200":
+          description: Updated client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete or deactivate a client
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Deals
+  /deals:
+    get:
+      operationId: listDeals
+      tags: [deals]
+      summary: List deals (optionally filtered)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: stage
+          in: query
+          schema:
+            type: string
+        - name: owner_id
+          in: query
+          schema:
+            type: integer
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of deals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DealListResponse"
+
+    post:
+      operationId: createDeal
+      tags: [deals]
+      summary: Create a new deal
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DealInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
+
+  /deals/{id}:
+    get:
+      operationId: getDeal
+      tags: [deals]
+      summary: Get a deal by ID with activities
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deal details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DealDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateDeal
+      tags: [deals]
+      summary: Update a deal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DealUpdate"
+      responses:
+        "200":
+          description: Updated deal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
+
+    delete:
+      operationId: deleteDeal
+      tags: [deals]
+      summary: Delete a deal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /deals/{id}/stage:
+    patch:
+      operationId: updateDealStage
+      tags: [deals]
+      summary: Move a deal to a new stage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DealStageUpdate"
+      responses:
+        "200":
+          description: Updated deal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
+
+  # Activities
+  /deals/{dealId}/activities:
+    get:
+      operationId: listActivities
+      tags: [activities]
+      summary: List activities for a deal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Activities timeline
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+
+    post:
+      operationId: createActivity
+      tags: [activities]
+      summary: Add an activity to a deal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivityInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+
+  # Ad Accounts
+  /ad-accounts:
+    get:
+      operationId: listAdAccounts
+      tags: [ad-accounts]
+      summary: List ad accounts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: client_id
+          in: query
+          schema:
+            type: integer
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of ad accounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdAccountListResponse"
+
+    post:
+      operationId: createAdAccount
+      tags: [ad-accounts]
+      summary: Create a new ad account
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdAccountInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdAccount"
+
+  /ad-accounts/{id}:
+    get:
+      operationId: getAdAccount
+      tags: [ad-accounts]
+      summary: Get an ad account by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ad account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdAccount"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateAdAccount
+      tags: [ad-accounts]
+      summary: Update an ad account
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdAccountUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdAccount"
+
+    delete:
+      operationId: deleteAdAccount
+      tags: [ad-accounts]
+      summary: Delete an ad account
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Dashboard
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get pipeline summary and KPIs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/pipeline:
+    get:
+      operationId: getPipelineBoard
+      tags: [dashboard]
+      summary: Get all deals grouped by stage for kanban
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: owner_id
+          in: query
+          schema:
+            type: integer
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pipeline board
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineBoard"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activities across all deals
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recent activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityWithContext"
+
+  /dashboard/reports:
+    get:
+      operationId: getReports
+      tags: [dashboard]
+      summary: Get report data
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Report data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportData"
+
+  # WhatsApp Integration
+  /integrations/whatsapp/leads:
+    post:
+      operationId: whatsappCreateLead
+      tags: [integrations]
+      summary: Create lead from WhatsApp
+      security:
+        - integrationKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsappLeadInput"
+      responses:
+        "200":
+          description: Client and deal created/updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappLeadResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /integrations/whatsapp/deals/update-stage:
+    post:
+      operationId: whatsappUpdateDealStage
+      tags: [integrations]
+      summary: Update deal stage from WhatsApp
+      security:
+        - integrationKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsappStageUpdate"
+      responses:
+        "200":
+          description: Deal updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
+        "404":
+          description: Deal not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /integrations/whatsapp/clients/update:
+    post:
+      operationId: whatsappUpdateClient
+      tags: [integrations]
+      summary: Update client data from WhatsApp
+      security:
+        - integrationKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsappClientUpdate"
+      responses:
+        "200":
+          description: Client updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "404":
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /integrations/whatsapp/client-by-phone:
+    get:
+      operationId: whatsappGetClientByPhone
+      tags: [integrations]
+      summary: Get client and deals by phone number
+      security:
+        - integrationKey: []
+      parameters:
+        - name: phone
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client with deals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappClientLookup"
+        "404":
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    integrationKey:
+      type: apiKey
+      in: header
+      name: X-Integration-Key
+
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    # Auth
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+
+        password:
+          type: string
+          minLength: 1
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    # Users
+    User:
+      type: object
+      required: [id, name, email, role, active, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, sales]
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UserInput:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+
+        password:
+          type: string
+          minLength: 6
+        role:
+          type: string
+          enum: [admin, sales]
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+
+        role:
+          type: string
+          enum: [admin, sales]
+        active:
+          type: boolean
+        password:
+          type: string
+          minLength: 6
+
+    # Clients
+    Client:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: ["string", "null"]
+        contactName:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        document:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        externalId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    ClientInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        type:
+          type: string
+        contactName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        document:
+          type: string
+        notes:
+          type: string
+        status:
+          type: string
+        externalId:
+          type: string
+
+    ClientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        type:
+          type: string
+        contactName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        document:
+          type: string
+        notes:
+          type: string
+        status:
+          type: string
+
+    ClientListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Client"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    ClientDetail:
+      type: object
+      required: [client, deals, adAccounts]
+      properties:
+        client:
+          $ref: "#/components/schemas/Client"
+        deals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Deal"
+        adAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdAccount"
+
+    # Deals
+    Deal:
+      type: object
+      required: [id, title, stage, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        clientId:
+          type: ["integer", "null"]
+        ownerId:
+          type: ["integer", "null"]
+        stage:
+          type: string
+          enum: [lead_captado, qualificacao, proposta, negociacao, fechamento, onboarding, ativo, renovacao, encerrado]
+        platform:
+          type: ["string", "null"]
+        estimatedValue:
+          type: ["number", "null"]
+        niche:
+          type: ["string", "null"]
+        riskLevel:
+          type: ["string", "null"]
+        leadSource:
+          type: ["string", "null"]
+        hasBlockHistory:
+          type: ["boolean", "null"]
+        blockDescription:
+          type: ["string", "null"]
+        proposalValue:
+          type: ["number", "null"]
+        proposalConditions:
+          type: ["string", "null"]
+        proposalTerm:
+          type: ["string", "null"]
+        acceptanceDate:
+          type: ["string", "null"]
+          format: date
+        paymentMethod:
+          type: ["string", "null"]
+        termsAccepted:
+          type: ["boolean", "null"]
+        adAccountId:
+          type: ["integer", "null"]
+        adAccountCreated:
+          type: ["boolean", "null"]
+        adAccountLimit:
+          type: ["number", "null"]
+        firstCampaignActive:
+          type: ["boolean", "null"]
+        rentalStatus:
+          type: ["string", "null"]
+        contractEndDate:
+          type: ["string", "null"]
+          format: date
+        clientName:
+          type: ["string", "null"]
+        ownerName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    DealInput:
+      type: object
+      required: [title, stage]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        clientId:
+          type: integer
+        ownerId:
+          type: integer
+        stage:
+          type: string
+          enum: [lead_captado, qualificacao, proposta, negociacao, fechamento, onboarding, ativo, renovacao, encerrado]
+        platform:
+          type: string
+        estimatedValue:
+          type: number
+        niche:
+          type: string
+        riskLevel:
+          type: string
+        leadSource:
+          type: string
+        hasBlockHistory:
+          type: boolean
+        blockDescription:
+          type: string
+        proposalValue:
+          type: number
+        proposalConditions:
+          type: string
+        proposalTerm:
+          type: string
+        acceptanceDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+        termsAccepted:
+          type: boolean
+        adAccountId:
+          type: integer
+        adAccountCreated:
+          type: boolean
+        adAccountLimit:
+          type: number
+        firstCampaignActive:
+          type: boolean
+        rentalStatus:
+          type: string
+        contractEndDate:
+          type: string
+          format: date
+
+    DealUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        clientId:
+          type: integer
+        ownerId:
+          type: integer
+        stage:
+          type: string
+          enum: [lead_captado, qualificacao, proposta, negociacao, fechamento, onboarding, ativo, renovacao, encerrado]
+        platform:
+          type: string
+        estimatedValue:
+          type: number
+        niche:
+          type: string
+        riskLevel:
+          type: string
+        leadSource:
+          type: string
+        hasBlockHistory:
+          type: boolean
+        blockDescription:
+          type: string
+        proposalValue:
+          type: number
+        proposalConditions:
+          type: string
+        proposalTerm:
+          type: string
+        acceptanceDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+        termsAccepted:
+          type: boolean
+        adAccountId:
+          type: integer
+        adAccountCreated:
+          type: boolean
+        adAccountLimit:
+          type: number
+        firstCampaignActive:
+          type: boolean
+        rentalStatus:
+          type: string
+        contractEndDate:
+          type: string
+          format: date
+
+    DealStageUpdate:
+      type: object
+      required: [stage]
+      properties:
+        stage:
+          type: string
+          enum: [lead_captado, qualificacao, proposta, negociacao, fechamento, onboarding, ativo, renovacao, encerrado]
+        reason:
+          type: string
+
+    DealListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Deal"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    DealDetail:
+      type: object
+      required: [deal, activities]
+      properties:
+        deal:
+          $ref: "#/components/schemas/Deal"
+        activities:
+          type: array
+          items:
+            $ref: "#/components/schemas/Activity"
+
+    # Activities
+    Activity:
+      type: object
+      required: [id, dealId, type, description, createdAt]
+      properties:
+        id:
+          type: integer
+        dealId:
+          type: integer
+        userId:
+          type: ["integer", "null"]
+        userName:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [note, stage_change, contact]
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ActivityInput:
+      type: object
+      required: [type, description]
+      properties:
+        type:
+          type: string
+          enum: [note, stage_change, contact]
+        description:
+          type: string
+          minLength: 1
+
+    ActivityWithContext:
+      type: object
+      required: [id, dealId, type, description, createdAt]
+      properties:
+        id:
+          type: integer
+        dealId:
+          type: integer
+        dealTitle:
+          type: ["string", "null"]
+        userId:
+          type: ["integer", "null"]
+        userName:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [note, stage_change, contact]
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # Ad Accounts
+    AdAccount:
+      type: object
+      required: [id, platform, accountIdentifier, status, createdAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: ["integer", "null"]
+        clientName:
+          type: ["string", "null"]
+        platform:
+          type: string
+        accountIdentifier:
+          type: string
+        monthlyLimit:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [ativa, bloqueada, em_revisao, encerrada]
+        startDate:
+          type: ["string", "null"]
+          format: date
+        endDate:
+          type: ["string", "null"]
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    AdAccountInput:
+      type: object
+      required: [platform, accountIdentifier, status]
+      properties:
+        clientId:
+          type: integer
+        platform:
+          type: string
+          minLength: 1
+        accountIdentifier:
+          type: string
+          minLength: 1
+        monthlyLimit:
+          type: number
+        status:
+          type: string
+          enum: [ativa, bloqueada, em_revisao, encerrada]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    AdAccountUpdate:
+      type: object
+      properties:
+        clientId:
+          type: integer
+        platform:
+          type: string
+        accountIdentifier:
+          type: string
+        monthlyLimit:
+          type: number
+        status:
+          type: string
+          enum: [ativa, bloqueada, em_revisao, encerrada]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+
+    AdAccountListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdAccount"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # Dashboard
+    StageCount:
+      type: object
+      required: [stage, count, totalValue]
+      properties:
+        stage:
+          type: string
+        count:
+          type: integer
+        totalValue:
+          type: number
+
+    DashboardSummary:
+      type: object
+      required: [totalDeals, totalClients, totalAdAccounts, activeAdAccounts, dealsByStage, closedThisMonth, avgTicket, totalPipelineValue]
+      properties:
+        totalDeals:
+          type: integer
+        totalClients:
+          type: integer
+        totalAdAccounts:
+          type: integer
+        activeAdAccounts:
+          type: integer
+        dealsByStage:
+          type: array
+          items:
+            $ref: "#/components/schemas/StageCount"
+        closedThisMonth:
+          type: integer
+        avgTicket:
+          type: number
+        totalPipelineValue:
+          type: number
+
+    PipelineStage:
+      type: object
+      required: [stage, deals]
+      properties:
+        stage:
+          type: string
+        deals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Deal"
+
+    PipelineBoard:
+      type: object
+      required: [stages]
+      properties:
+        stages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PipelineStage"
+
+    ReportData:
+      type: object
+      required: [dealsByStage, closedDeals, avgTicket, churnReasons]
+      properties:
+        dealsByStage:
+          type: array
+          items:
+            $ref: "#/components/schemas/StageCount"
+        closedDeals:
+          type: integer
+        closedValue:
+          type: number
+        avgTicket:
+          type: number
+        churnReasons:
+          type: array
+          items:
+            type: object
+            required: [reason, count]
+            properties:
+              reason:
+                type: string
+              count:
+                type: integer
+
+    # WhatsApp Integration
+    WhatsappLeadInput:
+      type: object
+      required: [name]
+      properties:
+        externalId:
+          type: string
+        name:
+          type: string
+          minLength: 1
+        phone:
+          type: string
+        niche:
+          type: string
+        platforms:
+          type: array
+          items:
+            type: string
+        estimatedInvestment:
+          type: number
+        hasBlockHistory:
+          type: boolean
+        blockDescription:
+          type: string
+        intent:
+          type: string
+
+    WhatsappLeadResponse:
+      type: object
+      required: [client, deal]
+      properties:
+        client:
+          $ref: "#/components/schemas/Client"
+        deal:
+          $ref: "#/components/schemas/Deal"
+
+    WhatsappStageUpdate:
+      type: object
+      required: [dealId, newStage]
+      properties:
+        dealId:
+          type: integer
+        newStage:
+          type: string
+          enum: [lead_captado, qualificacao, proposta, negociacao, fechamento, onboarding, ativo, renovacao, encerrado]
+        reason:
+          type: string
+        trigger:
+          type: string
+
+    WhatsappClientUpdate:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          minLength: 1
+        name:
+          type: string
+        niche:
+          type: string
+        hasBlockHistory:
+          type: boolean
+        blockDescription:
+          type: string
+        status:
+          type: string
+
+    WhatsappClientLookup:
+      type: object
+      required: [client, deals]
+      properties:
+        client:
+          $ref: "#/components/schemas/Client"
+        deals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Deal"
