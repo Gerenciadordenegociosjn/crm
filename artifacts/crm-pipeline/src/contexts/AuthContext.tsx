@@ -1,19 +1,15 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useGetMe, User, setAuthTokenGetter, getGetMeQueryKey } from '@workspace/api-client-react';
+import { useState, useEffect, useContext, ReactNode } from 'react';
+import { useGetMe, setAuthTokenGetter, getGetMeQueryKey } from '@workspace/api-client-react';
+import type { User } from '@workspace/api-client-react';
+import { AuthContext, AuthContextType } from './auth-context-ref';
 
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  login: (token: string, user: User) => void;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
+export type { AuthContextType };
+export { AuthContext };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('crm_token'));
   const [user, setUser] = useState<User | null>(null);
-  
+
   useEffect(() => {
     setAuthTokenGetter(() => localStorage.getItem('crm_token'));
   }, []);
@@ -22,19 +18,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     query: {
       enabled: !!token,
       retry: false,
-      queryKey: getGetMeQueryKey()
-    }
+      queryKey: getGetMeQueryKey(),
+    },
   });
 
   useEffect(() => {
-    if (meData) {
-      setUser(meData);
-    }
+    if (meData) setUser(meData);
   }, [meData]);
 
   useEffect(() => {
     if (error) {
-      // Clear token on 401
       localStorage.removeItem('crm_token');
       setToken(null);
       setUser(null);
@@ -54,7 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading: isLoadingMe && !!token, login, logout: handleLogout }}>
+    <AuthContext.Provider
+      value={{ user, isLoading: isLoadingMe && !!token, login, logout: handleLogout }}
+    >
       {children}
     </AuthContext.Provider>
   );

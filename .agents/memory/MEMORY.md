@@ -1,0 +1,2 @@
+- [Codegen HMR AuthContext crash](codegen-hmr-authcontext.md) — separar createContext num ficheiro sem imports runtime de @workspace/* para sobreviver a codegen HMR.
+- [Zod query params date format](zod-query-date-format.md) — não usar `format: date` em query params OpenAPI; gera zod.date() que falha em HTTP strings.

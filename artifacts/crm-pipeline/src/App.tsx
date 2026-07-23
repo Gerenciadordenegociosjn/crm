@@ -42,8 +42,6 @@ function ProtectedRoute({ component: Component, adminOnly = false }: { component
 }
 
 function Router() {
-  const { user } = useAuth();
-  
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
@@ -55,7 +53,7 @@ function Router() {
       <Route path="/ad-accounts" component={() => <ProtectedRoute component={AdAccountsPage} />} />
       <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={UsersPage} adminOnly />} />
-      <Route component={user ? () => <ProtectedRoute component={NotFound} /> : LoginPage} />
+      <Route component={() => <ProtectedRoute component={NotFound} />} />
     </Switch>
   );
 }

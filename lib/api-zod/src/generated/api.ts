@@ -805,8 +805,8 @@ export const GetPipelineBoardQueryParams = zod.object({
   "owner_id": zod.coerce.number().optional(),
   "platform": zod.coerce.string().optional(),
   "search": zod.coerce.string().optional(),
-  "start_date": zod.date().optional(),
-  "end_date": zod.date().optional()
+  "start_date": zod.coerce.string().optional(),
+  "end_date": zod.coerce.string().optional()
 })
 
 export const GetPipelineBoardResponse = zod.object({
@@ -870,8 +870,8 @@ export const GetRecentActivityResponse = zod.array(GetRecentActivityResponseItem
  * @summary Get report data
  */
 export const GetReportsQueryParams = zod.object({
-  "start_date": zod.date().optional(),
-  "end_date": zod.date().optional()
+  "start_date": zod.coerce.string().optional(),
+  "end_date": zod.coerce.string().optional()
 })
 
 export const GetReportsResponse = zod.object({

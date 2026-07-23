@@ -701,12 +701,10 @@ paths:
           in: query
           schema:
             type: string
-            format: date
         - name: end_date
           in: query
           schema:
             type: string
-            format: date
       responses:
         "200":
           description: Pipeline board
@@ -749,12 +747,10 @@ paths:
           in: query
           schema:
             type: string
-            format: date
         - name: end_date
           in: query
           schema:
             type: string
-            format: date
       responses:
         "200":
           description: Report data
