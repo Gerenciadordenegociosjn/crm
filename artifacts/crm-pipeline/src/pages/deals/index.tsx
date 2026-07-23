@@ -241,6 +241,7 @@ export default function DealsPage() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Etapa</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
+                <TableHead>Frequência</TableHead>
                 <TableHead>Plataforma</TableHead>
                 <TableHead>Criado em</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
@@ -248,9 +249,9 @@ export default function DealsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Carregando negócios...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Carregando negócios...</TableCell></TableRow>
               ) : dealsResponse?.data.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center h-24 text-muted-foreground">Nenhum negócio encontrado.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">Nenhum negócio encontrado.</TableCell></TableRow>
               ) : dealsResponse?.data.map((deal) => (
                 <TableRow key={deal.id} className="hover:bg-muted/20">
                   <TableCell className="font-semibold text-primary"><Link href={`/deals/${deal.id}`}>{deal.title}</Link></TableCell>
@@ -261,6 +262,7 @@ export default function DealsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-mono font-medium">{formatCurrency(deal.estimatedValue)}</TableCell>
+                  <TableCell>{FREQUENCY_OPTIONS.find(o => o.value === (deal as any).paymentFrequency)?.label ?? '-'}</TableCell>
                   <TableCell>{deal.platform || '-'}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">{formatDate(deal.createdAt)}</TableCell>
                   <TableCell className="text-right">
