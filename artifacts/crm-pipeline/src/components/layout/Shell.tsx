@@ -35,7 +35,7 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="flex h-screen w-full bg-background overflow-hidden">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r flex flex-col transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-16 flex items-center justify-center px-4 bg-[#0d1b2e] border-b border-[#1e3050]">
+        <div className="h-16 flex items-center justify-center px-4 border-b">
           <img src="/logo.png" alt="iapag CRM" className="h-9 w-auto object-contain" />
         </div>
         
@@ -71,7 +71,7 @@ export function Shell({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="h-14 flex items-center justify-between px-4 border-b bg-card md:hidden">
-          <div className="flex items-center bg-[#0d1b2e] rounded-lg px-3 py-1">
+          <div className="flex items-center">
             <img src="/logo.png" alt="iapag CRM" className="h-7 w-auto object-contain" />
           </div>
           <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
