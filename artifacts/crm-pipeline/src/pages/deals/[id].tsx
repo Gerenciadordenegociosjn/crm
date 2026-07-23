@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const updateSchema = z.object({
   title: z.string().min(1, 'Título é obrigatório'),
   estimatedValue: z.coerce.number().optional(),
+  paymentFrequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly']).optional(),
   platform: z.string().optional(),
   niche: z.string().optional(),
   riskLevel: z.string().optional(),
@@ -51,6 +52,7 @@ export default function DealDetailPage() {
     defaultValues: {
       title: '',
       estimatedValue: 0,
+      paymentFrequency: undefined,
       platform: '',
       niche: '',
       riskLevel: '',
@@ -71,6 +73,7 @@ export default function DealDetailPage() {
       form.reset({
         title: d.title || '',
         estimatedValue: d.estimatedValue || 0,
+        paymentFrequency: (d as any).paymentFrequency || undefined,
         platform: d.platform || '',
         niche: d.niche || '',
         riskLevel: d.riskLevel || '',
@@ -176,10 +179,28 @@ export default function DealDetailPage() {
                     )} />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="estimatedValue" render={({ field }) => (
                       <FormItem><FormLabel>Valor Estimado</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="font-mono" /></FormControl><FormMessage /></FormItem>
                     )} />
+                    <FormField control={form.control} name="paymentFrequency" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Frequência de Pagamento</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="daily">Diário</SelectItem>
+                            <SelectItem value="weekly">Semanal</SelectItem>
+                            <SelectItem value="biweekly">Quinzenal</SelectItem>
+                            <SelectItem value="monthly">Mensal</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="platform" render={({ field }) => (
                       <FormItem><FormLabel>Plataforma</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
