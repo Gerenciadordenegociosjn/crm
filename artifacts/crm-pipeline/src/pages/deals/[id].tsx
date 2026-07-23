@@ -307,8 +307,8 @@ export default function DealDetailPage() {
                       
                       <div className="absolute left-0 top-1">
                         {act.type === 'note' ? (
-                          <div className="h-6 w-6 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center z-10 relative">
-                            <MessageSquare className="h-3 w-3 text-blue-600" />
+                          <div className="h-6 w-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center z-10 relative">
+                            <MessageSquare className="h-3 w-3 text-primary" />
                           </div>
                         ) : act.type === 'stage_change' ? (
                           <div className="h-6 w-6 rounded-full bg-green-100 border border-green-200 flex items-center justify-center z-10 relative">

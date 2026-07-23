@@ -38,10 +38,10 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-t-4 border-t-blue-500 shadow-sm">
+        <Card className="border-t-4 border-t-primary shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total de Negócios</CardTitle>
-            <Briefcase className="h-4 w-4 text-blue-500" />
+            <Briefcase className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono">{summary.totalDeals}</div>
@@ -146,8 +146,8 @@ export default function ReportsPage() {
                     <div key={act.id} className="flex gap-3 text-sm">
                       <div className="mt-0.5">
                         {act.type === 'note' ? (
-                          <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                            <MessageSquare className="h-3 w-3 text-blue-600" />
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                            <MessageSquare className="h-3 w-3 text-primary" />
                           </div>
                         ) : act.type === 'stage_change' ? (
                           <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">

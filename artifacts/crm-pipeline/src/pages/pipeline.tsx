@@ -76,7 +76,7 @@ const STAGE_ICONS: Record<string, React.ComponentType<any>> = {
 
 const STAGE_COLORS: Record<string, string> = {
   lead_captado: 'bg-slate-100 text-slate-700 border-slate-200',
-  qualificacao: 'bg-blue-100 text-blue-700 border-blue-200',
+  qualificacao: 'bg-primary/10 text-primary border-primary/20',
   proposta: 'bg-indigo-100 text-indigo-700 border-indigo-200',
   negociacao: 'bg-violet-100 text-violet-700 border-violet-200',
   fechamento: 'bg-emerald-100 text-emerald-700 border-emerald-200',
