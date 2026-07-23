@@ -361,6 +361,11 @@ paths:
           in: query
           schema:
             type: integer
+        - name: payment_frequency
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, biweekly, monthly]
       responses:
         "200":
           description: List of deals

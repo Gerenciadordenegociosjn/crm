@@ -5,6 +5,7 @@
  * CRM Pipeline - Locação de Contas de Anúncio
  * OpenAPI spec version: 0.1.0
  */
+import type { ListDealsPaymentFrequency } from './listDealsPaymentFrequency';
 
 export type ListDealsParams = {
 stage?: string;
@@ -13,4 +14,5 @@ platform?: string;
 search?: string;
 page?: number;
 limit?: number;
+payment_frequency?: ListDealsPaymentFrequency;
 };

@@ -40,13 +40,14 @@ router.get("/deals", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const { stage, owner_id, platform, search, page = 1, limit = 50 } = query.data;
+  const { stage, owner_id, platform, search, page = 1, limit = 50, payment_frequency } = query.data;
   const offset = (page - 1) * limit;
 
   const conditions: any[] = [];
   if (stage) conditions.push(eq(dealsTable.stage, stage));
   if (owner_id) conditions.push(eq(dealsTable.ownerId, owner_id));
   if (platform) conditions.push(eq(dealsTable.platform, platform));
+  if (payment_frequency) conditions.push(eq(dealsTable.paymentFrequency, payment_frequency));
   if (search) {
     conditions.push(ilike(dealsTable.title, `%${search}%`));
   }

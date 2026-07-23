@@ -47,6 +47,7 @@ export * from './healthStatus';
 export * from './listAdAccountsParams';
 export * from './listClientsParams';
 export * from './listDealsParams';
+export * from './listDealsPaymentFrequency';
 export * from './loginInput';
 export * from './pipelineBoard';
 export * from './pipelineStage';

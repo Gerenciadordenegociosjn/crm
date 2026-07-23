@@ -336,7 +336,8 @@ export const ListDealsQueryParams = zod.object({
   "platform": zod.coerce.string().optional(),
   "search": zod.coerce.string().optional(),
   "page": zod.coerce.number().optional(),
-  "limit": zod.coerce.number().optional()
+  "limit": zod.coerce.number().optional(),
+  "payment_frequency": zod.enum(['daily', 'weekly', 'biweekly', 'monthly']).optional()
 })
 
 export const ListDealsResponse = zod.object({

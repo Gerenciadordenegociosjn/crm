@@ -28,14 +28,27 @@ const dealSchema = z.object({
   niche: z.string().optional(),
 });
 
+const FREQUENCY_OPTIONS = [
+  { value: 'daily', label: 'Diário' },
+  { value: 'weekly', label: 'Semanal' },
+  { value: 'biweekly', label: 'Quinzenal' },
+  { value: 'monthly', label: 'Mensal' },
+] as const;
+
 export default function DealsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [frequencyFilter, setFrequencyFilter] = useState<string | undefined>(undefined);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: dealsResponse, isLoading } = useListDeals({ search, page, limit: 20 });
+  const { data: dealsResponse, isLoading } = useListDeals({
+    search,
+    page,
+    limit: 20,
+    ...(frequencyFilter ? { payment_frequency: frequencyFilter as any } : {}),
+  });
   const { data: clientsResponse } = useListClients({ limit: 100 });
   const { data: users = [] } = useListUsers();
   const salesUsers = users.filter(u => u.role === 'sales');
@@ -194,14 +207,30 @@ export default function DealsPage() {
 
       <Card>
         <CardHeader className="py-4 border-b">
-          <div className="flex items-center">
-            <Search className="h-4 w-4 text-muted-foreground mr-2" />
-            <Input 
-              placeholder="Buscar por título ou cliente..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="max-w-sm h-9 border-none bg-transparent shadow-none focus-visible:ring-0 px-0"
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center flex-1 min-w-[200px]">
+              <Search className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
+              <Input 
+                placeholder="Buscar por título ou cliente..." 
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="h-9 border-none bg-transparent shadow-none focus-visible:ring-0 px-0"
+              />
+            </div>
+            <Select
+              value={frequencyFilter ?? 'all'}
+              onValueChange={(val) => { setFrequencyFilter(val === 'all' ? undefined : val); setPage(1); }}
+            >
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Frequência" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as frequências</SelectItem>
+                {FREQUENCY_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <div className="overflow-x-auto">

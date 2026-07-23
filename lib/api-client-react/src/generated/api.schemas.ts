@@ -610,7 +610,18 @@ platform?: string;
 search?: string;
 page?: number;
 limit?: number;
+payment_frequency?: ListDealsPaymentFrequency;
 };
+
+export type ListDealsPaymentFrequency = typeof ListDealsPaymentFrequency[keyof typeof ListDealsPaymentFrequency];
+
+
+export const ListDealsPaymentFrequency = {
+  daily: 'daily',
+  weekly: 'weekly',
+  biweekly: 'biweekly',
+  monthly: 'monthly',
+} as const;
 
 export type ListAdAccountsParams = {
 client_id?: number;
