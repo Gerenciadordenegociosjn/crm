@@ -5,6 +5,7 @@
  * CRM Pipeline - Locação de Contas de Anúncio
  * OpenAPI spec version: 0.1.0
  */
+import type { DealInputPaymentFrequency } from './dealInputPaymentFrequency';
 import type { DealInputStage } from './dealInputStage';
 
 export interface DealInput {
@@ -30,6 +31,7 @@ export interface DealInput {
   adAccountCreated?: boolean;
   adAccountLimit?: number;
   firstCampaignActive?: boolean;
+  paymentFrequency?: DealInputPaymentFrequency;
   rentalStatus?: string;
   contractEndDate?: Date;
 }

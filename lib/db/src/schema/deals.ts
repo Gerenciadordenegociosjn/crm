@@ -29,6 +29,8 @@ export const dealsTable = pgTable("deals", {
   adAccountCreated: boolean("ad_account_created"),
   adAccountLimit: numeric("ad_account_limit", { precision: 12, scale: 2 }),
   firstCampaignActive: boolean("first_campaign_active"),
+  // Frequência de pagamento
+  paymentFrequency: text("payment_frequency"),
   // Ativo / Renovação
   rentalStatus: text("rental_status"),
   contractEndDate: date("contract_end_date", { mode: "string" }),

@@ -48,6 +48,18 @@ import {
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getPaymentFrequencyLabel(val: string): string {
+  switch (val) {
+    case 'daily': return 'Diário';
+    case 'weekly': return 'Semanal';
+    case 'biweekly': return 'Quinzenal';
+    case 'monthly': return 'Mensal';
+    default: return val;
+  }
+}
+
 // ── Stage metadata ────────────────────────────────────────────────────────────
 
 const STAGE_ICONS: Record<string, React.ComponentType<any>> = {
@@ -376,10 +388,17 @@ export default function PipelinePage() {
                                       </div>
 
                                       <div className="flex items-center justify-between text-[11px] pt-1.5 border-t">
-                                        <span className="font-mono font-semibold text-primary">
-                                          {formatCurrency(deal.estimatedValue)}
-                                        </span>
-                                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                        <div className="flex items-center gap-1 min-w-0">
+                                          <span className="font-mono font-semibold text-primary shrink-0">
+                                            {formatCurrency(deal.estimatedValue)}
+                                          </span>
+                                          {(deal as any).paymentFrequency && (
+                                            <span className="text-[9px] font-medium text-primary/70 bg-primary/10 px-1 py-0.5 rounded shrink-0">
+                                              {getPaymentFrequencyLabel((deal as any).paymentFrequency)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0 ml-1">
                                           {deal.platform || 'N/A'}
                                         </span>
                                       </div>

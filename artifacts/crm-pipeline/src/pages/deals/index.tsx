@@ -23,6 +23,7 @@ const dealSchema = z.object({
   ownerId: z.coerce.number().optional().nullable(),
   stage: z.enum(['lead_captado', 'qualificacao', 'proposta', 'negociacao', 'fechamento', 'onboarding', 'ativo', 'renovacao', 'encerrado']),
   estimatedValue: z.coerce.number().optional(),
+  paymentFrequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly']).optional(),
   platform: z.string().optional(),
   niche: z.string().optional(),
 });
@@ -158,13 +159,30 @@ export default function DealsPage() {
                   <FormField control={form.control} name="estimatedValue" render={({ field }) => (
                     <FormItem><FormLabel>Valor Estimado (R$)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
+                  <FormField control={form.control} name="paymentFrequency" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frequência de Pagamento</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="daily">Diário</SelectItem>
+                          <SelectItem value="weekly">Semanal</SelectItem>
+                          <SelectItem value="biweekly">Quinzenal</SelectItem>
+                          <SelectItem value="monthly">Mensal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="platform" render={({ field }) => (
                     <FormItem><FormLabel>Plataforma</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
+                  <FormField control={form.control} name="niche" render={({ field }) => (
+                    <FormItem><FormLabel>Nicho</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
                 </div>
-                <FormField control={form.control} name="niche" render={({ field }) => (
-                  <FormItem><FormLabel>Nicho</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
                 <div className="flex justify-end pt-4">
                   <Button type="submit" disabled={createDeal.isPending}>{createDeal.isPending ? 'Salvando...' : 'Salvar'}</Button>
                 </div>

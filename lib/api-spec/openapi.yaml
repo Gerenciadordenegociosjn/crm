@@ -1135,6 +1135,9 @@ components:
           type: ["number", "null"]
         firstCampaignActive:
           type: ["boolean", "null"]
+        paymentFrequency:
+          type: ["string", "null"]
+          enum: [daily, weekly, biweekly, monthly, "null"]
         rentalStatus:
           type: ["string", "null"]
         contractEndDate:
@@ -1200,6 +1203,9 @@ components:
           type: number
         firstCampaignActive:
           type: boolean
+        paymentFrequency:
+          type: string
+          enum: [daily, weekly, biweekly, monthly]
         rentalStatus:
           type: string
         contractEndDate:
@@ -1254,6 +1260,9 @@ components:
           type: number
         firstCampaignActive:
           type: boolean
+        paymentFrequency:
+          type: string
+          enum: [daily, weekly, biweekly, monthly]
         rentalStatus:
           type: string
         contractEndDate:

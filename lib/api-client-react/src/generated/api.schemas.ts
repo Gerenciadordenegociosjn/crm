@@ -151,6 +151,20 @@ export const DealStage = {
   encerrado: 'encerrado',
 } as const;
 
+/**
+ * @nullable
+ */
+export type DealPaymentFrequency = typeof DealPaymentFrequency[keyof typeof DealPaymentFrequency] | null;
+
+
+export const DealPaymentFrequency = {
+  daily: 'daily',
+  weekly: 'weekly',
+  biweekly: 'biweekly',
+  monthly: 'monthly',
+  null: 'null',
+} as const;
+
 export interface Deal {
   id: number;
   title: string;
@@ -193,6 +207,8 @@ export interface Deal {
   adAccountLimit?: number | null;
   /** @nullable */
   firstCampaignActive?: boolean | null;
+  /** @nullable */
+  paymentFrequency?: DealPaymentFrequency;
   /** @nullable */
   rentalStatus?: string | null;
   /** @nullable */
@@ -255,6 +271,16 @@ export const DealInputStage = {
   encerrado: 'encerrado',
 } as const;
 
+export type DealInputPaymentFrequency = typeof DealInputPaymentFrequency[keyof typeof DealInputPaymentFrequency];
+
+
+export const DealInputPaymentFrequency = {
+  daily: 'daily',
+  weekly: 'weekly',
+  biweekly: 'biweekly',
+  monthly: 'monthly',
+} as const;
+
 export interface DealInput {
   /** @minLength 1 */
   title: string;
@@ -278,6 +304,7 @@ export interface DealInput {
   adAccountCreated?: boolean;
   adAccountLimit?: number;
   firstCampaignActive?: boolean;
+  paymentFrequency?: DealInputPaymentFrequency;
   rentalStatus?: string;
   contractEndDate?: string;
 }
@@ -295,6 +322,16 @@ export const DealUpdateStage = {
   ativo: 'ativo',
   renovacao: 'renovacao',
   encerrado: 'encerrado',
+} as const;
+
+export type DealUpdatePaymentFrequency = typeof DealUpdatePaymentFrequency[keyof typeof DealUpdatePaymentFrequency];
+
+
+export const DealUpdatePaymentFrequency = {
+  daily: 'daily',
+  weekly: 'weekly',
+  biweekly: 'biweekly',
+  monthly: 'monthly',
 } as const;
 
 export interface DealUpdate {
@@ -320,6 +357,7 @@ export interface DealUpdate {
   adAccountCreated?: boolean;
   adAccountLimit?: number;
   firstCampaignActive?: boolean;
+  paymentFrequency?: DealUpdatePaymentFrequency;
   rentalStatus?: string;
   contractEndDate?: string;
 }
