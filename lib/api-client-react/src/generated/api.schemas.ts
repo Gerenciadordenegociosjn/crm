@@ -586,6 +586,8 @@ export type GetPipelineBoardParams = {
 owner_id?: number;
 platform?: string;
 search?: string;
+start_date?: string;
+end_date?: string;
 };
 
 export type GetRecentActivityParams = {

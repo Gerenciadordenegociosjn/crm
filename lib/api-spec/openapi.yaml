@@ -697,6 +697,16 @@ paths:
           in: query
           schema:
             type: string
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
       responses:
         "200":
           description: Pipeline board

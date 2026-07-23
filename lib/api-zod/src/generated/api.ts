@@ -804,7 +804,9 @@ export const GetDashboardSummaryResponse = zod.object({
 export const GetPipelineBoardQueryParams = zod.object({
   "owner_id": zod.coerce.number().optional(),
   "platform": zod.coerce.string().optional(),
-  "search": zod.coerce.string().optional()
+  "search": zod.coerce.string().optional(),
+  "start_date": zod.date().optional(),
+  "end_date": zod.date().optional()
 })
 
 export const GetPipelineBoardResponse = zod.object({

@@ -10,4 +10,6 @@ export type GetPipelineBoardParams = {
 owner_id?: number;
 platform?: string;
 search?: string;
+start_date?: Date;
+end_date?: Date;
 };

@@ -87,12 +87,14 @@ router.get("/dashboard/pipeline", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
-  const { owner_id, platform, search } = query.data;
+  const { owner_id, platform, search, start_date, end_date } = query.data;
 
   const conditions: any[] = [];
   if (owner_id) conditions.push(eq(dealsTable.ownerId, owner_id));
   if (platform) conditions.push(eq(dealsTable.platform, platform));
   if (search) conditions.push(ilike(dealsTable.title, `%${search}%`));
+  if (start_date) conditions.push(gte(dealsTable.createdAt, new Date(start_date)));
+  if (end_date) conditions.push(lte(dealsTable.createdAt, new Date(end_date + "T23:59:59")));
 
   const whereClause = conditions.length > 0 ? (conditions.length === 1 ? conditions[0] : and(...conditions)) : undefined;
 
