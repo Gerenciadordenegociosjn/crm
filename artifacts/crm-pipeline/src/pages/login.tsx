@@ -46,9 +46,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30 p-4">
-      <div className="mb-8 flex items-center font-bold text-3xl tracking-tighter">
-        <span className="text-primary mr-3 text-4xl">█</span>
-        <span>CRM<span className="font-light text-muted-foreground">Pipeline</span></span>
+      <div className="mb-8">
+        <div className="bg-[#0d1b2e] rounded-2xl px-10 py-6 shadow-lg">
+          <img src="/logo.png" alt="iapag CRM" className="h-20 w-auto object-contain" />
+        </div>
       </div>
       
       <Card className="w-full max-w-sm border-t-4 border-t-primary shadow-lg">
