@@ -47,7 +47,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30 p-4">
       <div className="mb-8">
-        <img src="/logo.png" alt="iapag CRM" className="h-20 w-auto object-contain" />
+        <img src="/logo.png" alt="iapag CRM" className="w-80 h-auto object-contain" />
       </div>
       
       <Card className="w-full max-w-sm border-t-4 border-t-primary shadow-lg">
