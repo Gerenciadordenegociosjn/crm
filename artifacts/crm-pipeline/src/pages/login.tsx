@@ -95,7 +95,7 @@ export default function LoginPage() {
       </Card>
       
       <p className="mt-8 text-sm text-muted-foreground max-w-xs text-center">
-        Sistema de uso interno para gestão de locação de contas de anúncio.
+        Sistema de uso interno para gestão do pipeline.
       </p>
     </div>
   );
