@@ -2,10 +2,12 @@ import { useState, useMemo } from 'react';
 import {
   useGetPipelineBoard,
   useUpdateDealStage,
+  useListSuppliers,
   Deal,
   DealStageUpdateStage,
   getGetPipelineBoardQueryKey,
 } from '@workspace/api-client-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +18,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { formatCurrency } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import {
   MessageSquare,
   LayoutDashboard,
@@ -29,6 +39,7 @@ import {
   ChevronRight,
   CalendarDays,
   Users as UsersIcon,
+  Building2,
 } from 'lucide-react';
 import {
   format,
@@ -98,6 +109,20 @@ const STAGE_LABELS: Record<string, string> = {
   encerrado: 'Encerrado',
 };
 
+// Supplier pill colors — cycles through a palette
+const SUPPLIER_PILL_COLORS = [
+  'bg-orange-500 text-white',
+  'bg-emerald-600 text-white',
+  'bg-violet-600 text-white',
+  'bg-sky-600 text-white',
+  'bg-rose-600 text-white',
+  'bg-amber-500 text-white',
+  'bg-teal-600 text-white',
+  'bg-indigo-600 text-white',
+  'bg-pink-600 text-white',
+  'bg-cyan-600 text-white',
+];
+
 // ── Period helpers ────────────────────────────────────────────────────────────
 
 type PeriodMode = 'week' | 'month' | 'year';
@@ -134,10 +159,24 @@ function moveCursor(cursor: Date, mode: PeriodMode, dir: 1 | -1): Date {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+type PendingDrop = {
+  dealId: number;
+  newStage: DealStageUpdateStage;
+  /** optimistic board state to revert on cancel */
+  prevBoardSnapshot: any;
+};
+
 export default function PipelinePage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
   const [search, setSearch] = useState('');
   const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
   const [cursor, setCursor] = useState<Date>(new Date());
+
+  // Supplier selection modal state
+  const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -157,6 +196,8 @@ export default function PipelinePage() {
     query: { queryKey: getGetPipelineBoardQueryKey(params) },
   });
 
+  const { data: suppliers = [] } = useListSuppliers();
+
   const updateStage = useUpdateDealStage();
 
   const handleDragEnd = (result: DropResult) => {
@@ -167,6 +208,18 @@ export default function PipelinePage() {
     const dealId = parseInt(draggableId, 10);
     const newStage = destination.droppableId as DealStageUpdateStage;
 
+    // Sales cannot move to 'ativo'
+    if (newStage === 'ativo' && !isAdmin) {
+      toast({
+        title: 'Acesso negado',
+        description: 'Somente administradores podem mover negócios para Ativo.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Apply optimistic update
+    const prevSnapshot = queryClient.getQueryData(getGetPipelineBoardQueryKey(params));
     queryClient.setQueryData(getGetPipelineBoardQueryKey(params), (old: any) => {
       if (!old) return old;
       const newStages = JSON.parse(JSON.stringify(old.stages));
@@ -188,6 +241,14 @@ export default function PipelinePage() {
       return { stages: newStages };
     });
 
+    // For 'ativo', pause and ask admin to pick a supplier
+    if (newStage === 'ativo') {
+      setSelectedSupplierId(null);
+      setPendingDrop({ dealId, newStage, prevBoardSnapshot: prevSnapshot });
+      return;
+    }
+
+    // All other stages: persist immediately
     updateStage.mutate(
       { id: dealId, data: { stage: newStage } },
       {
@@ -197,6 +258,46 @@ export default function PipelinePage() {
         },
       },
     );
+  };
+
+  const handleSupplierConfirm = () => {
+    if (!pendingDrop) return;
+    const { dealId, newStage } = pendingDrop;
+
+    updateStage.mutate(
+      {
+        id: dealId,
+        data: {
+          stage: newStage,
+          supplierId: selectedSupplierId ?? undefined,
+        } as any,
+      },
+      {
+        onSuccess: () => {
+          toast({ title: 'Negócio ativado com sucesso!' });
+          setPendingDrop(null);
+          setSelectedSupplierId(null);
+          queryClient.invalidateQueries({ queryKey: getGetPipelineBoardQueryKey(params) });
+        },
+        onError: () => {
+          toast({ title: 'Erro ao mover negócio', variant: 'destructive' });
+          // Revert optimistic update
+          if (pendingDrop.prevBoardSnapshot) {
+            queryClient.setQueryData(getGetPipelineBoardQueryKey(params), pendingDrop.prevBoardSnapshot);
+          }
+          setPendingDrop(null);
+          setSelectedSupplierId(null);
+        },
+      },
+    );
+  };
+
+  const handleSupplierCancel = () => {
+    if (pendingDrop?.prevBoardSnapshot) {
+      queryClient.setQueryData(getGetPipelineBoardQueryKey(params), pendingDrop.prevBoardSnapshot);
+    }
+    setPendingDrop(null);
+    setSelectedSupplierId(null);
   };
 
   const columns = useMemo(() => {
@@ -218,6 +319,77 @@ export default function PipelinePage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Supplier selection modal */}
+      <Dialog open={pendingDrop !== null} onOpenChange={(open) => { if (!open) handleSupplierCancel(); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Selecionar Fornecedor
+            </DialogTitle>
+            <DialogDescription>
+              Escolha o fornecedor que irá atender este cliente na ativação.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2">
+            {(suppliers as any[]).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhum fornecedor cadastrado. Acesse <strong>Fornecedores</strong> no menu para adicionar.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {(suppliers as any[]).map((s, idx) => {
+                  const colorClass = SUPPLIER_PILL_COLORS[idx % SUPPLIER_PILL_COLORS.length];
+                  const isSelected = selectedSupplierId === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSelectedSupplierId(isSelected ? null : s.id)}
+                      className={`
+                        inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold
+                        transition-all border-2
+                        ${colorClass}
+                        ${isSelected
+                          ? 'ring-2 ring-offset-2 ring-foreground scale-105 border-transparent'
+                          : 'border-transparent opacity-80 hover:opacity-100 hover:scale-105'}
+                      `}
+                    >
+                      {s.nickname || s.companyName}
+                      {isSelected && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {selectedSupplierId && (
+            <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+              Fornecedor selecionado:{' '}
+              <span className="font-semibold text-foreground">
+                {(suppliers as any[]).find((s) => s.id === selectedSupplierId)?.companyName}
+              </span>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleSupplierCancel}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSupplierConfirm}
+              disabled={updateStage.isPending}
+              className="gap-2"
+            >
+              <Zap className="h-4 w-4" />
+              {updateStage.isPending ? 'Ativando...' : 'Confirmar Ativação'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="shrink-0 mb-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -314,6 +486,9 @@ export default function PipelinePage() {
           <div className="flex-1 flex gap-3 overflow-x-auto pb-4 custom-scrollbar">
             {columns.map((col) => {
               const Icon = STAGE_ICONS[col.id] || FileText;
+              // Mark the 'ativo' column as admin-only visually for non-admins
+              const isAtivo = col.id === 'ativo';
+              const isDropDisabled = isAtivo && !isAdmin;
               return (
                 <div key={col.id} className="w-72 shrink-0 flex flex-col max-h-full">
                   {/* Column header */}
@@ -323,6 +498,9 @@ export default function PipelinePage() {
                     <div className="flex items-center gap-2">
                       <Icon className="h-3.5 w-3.5" />
                       <h3 className="font-bold text-xs">{col.title}</h3>
+                      {isAtivo && !isAdmin && (
+                        <span className="text-[9px] bg-black/10 px-1 py-0.5 rounded font-medium">Admin</span>
+                      )}
                     </div>
                     <Badge variant="outline" className="bg-white/50 text-xs px-1.5 py-0">
                       {col.count}
@@ -336,7 +514,7 @@ export default function PipelinePage() {
                   </div>
 
                   {/* Drop zone */}
-                  <Droppable droppableId={col.id}>
+                  <Droppable droppableId={col.id} isDropDisabled={isDropDisabled}>
                     {(provided, snapshot) => (
                       <div
                         {...provided.droppableProps}
@@ -344,6 +522,8 @@ export default function PipelinePage() {
                         className={`flex-1 overflow-y-auto min-h-[120px] p-1 -mx-1 rounded-md transition-colors ${
                           snapshot.isDraggingOver
                             ? 'bg-primary/5 border border-primary/20'
+                            : isDropDisabled
+                            ? 'bg-muted/5 opacity-60'
                             : 'bg-muted/10'
                         }`}
                       >
@@ -386,6 +566,13 @@ export default function PipelinePage() {
                                         <UsersIcon className="h-3 w-3 mr-1 shrink-0" />
                                         <span className="truncate">{(deal as any).clientName || 'Sem cliente'}</span>
                                       </div>
+
+                                      {(deal as any).supplierName && (
+                                        <div className="flex items-center text-[11px] text-muted-foreground">
+                                          <Building2 className="h-3 w-3 mr-1 shrink-0" />
+                                          <span className="truncate font-medium text-green-700">{(deal as any).supplierName}</span>
+                                        </div>
+                                      )}
 
                                       <div className="flex items-center justify-between text-[11px] pt-1.5 border-t">
                                         <div className="flex items-center gap-1 min-w-0">

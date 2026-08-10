@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, dealsTable, usersTable, clientsTable, activitiesTable } from "@workspace/db";
+import { db, dealsTable, usersTable, clientsTable, activitiesTable, suppliersTable } from "@workspace/db";
 import { eq, ilike, or, sql, and } from "drizzle-orm";
 import {
   CreateDealBody,
@@ -22,6 +22,9 @@ async function enrichDeal(deal: typeof dealsTable.$inferSelect) {
   const [owner] = deal.ownerId
     ? await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, deal.ownerId))
     : [null];
+  const [supplier] = (deal as any).supplierId
+    ? await db.select({ name: suppliersTable.companyName }).from(suppliersTable).where(eq(suppliersTable.id, (deal as any).supplierId))
+    : [null];
 
   return {
     ...deal,
@@ -30,6 +33,7 @@ async function enrichDeal(deal: typeof dealsTable.$inferSelect) {
     adAccountLimit: deal.adAccountLimit ? Number(deal.adAccountLimit) : null,
     clientName: client?.name ?? null,
     ownerName: owner?.name ?? null,
+    supplierName: supplier?.name ?? null,
   };
 }
 
@@ -238,15 +242,27 @@ router.patch("/deals/:id/stage", requireAuth, async (req: any, res): Promise<voi
   }
 
   const newStage = parsed.data.stage;
+
+  // Block sales from moving deals to 'ativo'
+  if (newStage === "ativo" && (req as any).userRole !== "admin") {
+    res.status(403).json({ error: "Somente administradores podem mover negócios para Ativo" });
+    return;
+  }
+
+  const newStage2 = newStage;
   const now = new Date();
   const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const stageUpdate: Record<string, unknown> = { stage: newStage, updatedAt: now };
-  if (newStage === "ativo" && !existingDeal.activeMonth) {
+  const stageUpdate: Record<string, unknown> = { stage: newStage2, updatedAt: now };
+  if (newStage2 === "ativo" && !existingDeal.activeMonth) {
     stageUpdate["activeMonth"] = ym;
   }
-  if (newStage === "encerrado") {
+  if (newStage2 === "encerrado") {
     stageUpdate["churnMonth"] = ym;
+  }
+  // Persist supplier selection when activating
+  if (newStage2 === "ativo" && (parsed.data as any).supplierId) {
+    stageUpdate["supplierId"] = (parsed.data as any).supplierId;
   }
 
   const [deal] = await db

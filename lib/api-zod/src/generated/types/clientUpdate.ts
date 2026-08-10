@@ -16,4 +16,5 @@ export interface ClientUpdate {
   document?: string;
   notes?: string;
   status?: string;
+  assignedSalesId?: number | null;
 }

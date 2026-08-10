@@ -194,7 +194,7 @@ export const CreateClientBody = zod.object({
   "notes": zod.string().optional(),
   "status": zod.string().optional(),
   "externalId": zod.string().optional(),
-  "assignedSalesId": zod.number().nullable().optional()
+  "assignedSalesId": zod.number().nullish()
 })
 
 export const CreateClientResponse = zod.object({
@@ -263,6 +263,8 @@ export const GetClientResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })),
@@ -300,7 +302,7 @@ export const UpdateClientBody = zod.object({
   "document": zod.string().optional(),
   "notes": zod.string().optional(),
   "status": zod.string().optional(),
-  "assignedSalesId": zod.number().nullable().optional()
+  "assignedSalesId": zod.number().nullish()
 })
 
 export const UpdateClientResponse = zod.object({
@@ -371,6 +373,8 @@ export const ListDealsResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })),
@@ -441,6 +445,8 @@ export const CreateDealResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -482,6 +488,8 @@ export const GetDealResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }),
@@ -562,6 +570,8 @@ export const UpdateDealResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -586,7 +596,8 @@ export const UpdateDealStageParams = zod.object({
 
 export const UpdateDealStageBody = zod.object({
   "stage": zod.enum(['lead_captado', 'qualificacao', 'proposta', 'negociacao', 'fechamento', 'onboarding', 'ativo', 'renovacao', 'encerrado']),
-  "reason": zod.string().optional()
+  "reason": zod.string().optional(),
+  "supplierId": zod.number().nullish()
 })
 
 export const UpdateDealStageResponse = zod.object({
@@ -617,6 +628,8 @@ export const UpdateDealStageResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -851,6 +864,8 @@ export const GetPipelineBoardResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }))
@@ -900,6 +915,105 @@ export const GetReportsResponse = zod.object({
   "count": zod.number()
 }))
 })
+
+
+/**
+ * @summary List all suppliers
+ */
+export const ListSuppliersResponseItem = zod.object({
+  "id": zod.number(),
+  "companyName": zod.string(),
+  "nickname": zod.string(),
+  "licenseCountry": zod.string(),
+  "operatingCountries": zod.array(zod.string()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish()
+})
+export const ListSuppliersResponse = zod.array(ListSuppliersResponseItem)
+
+
+/**
+ * @summary Create a new supplier (admin only)
+ */
+
+
+
+
+
+export const CreateSupplierBody = zod.object({
+  "companyName": zod.string().min(1),
+  "nickname": zod.string().min(1),
+  "licenseCountry": zod.string().min(1),
+  "operatingCountries": zod.array(zod.string()).optional()
+})
+
+export const CreateSupplierResponse = zod.object({
+  "id": zod.number(),
+  "companyName": zod.string(),
+  "nickname": zod.string(),
+  "licenseCountry": zod.string(),
+  "operatingCountries": zod.array(zod.string()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Get a supplier by ID
+ */
+export const GetSupplierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSupplierResponse = zod.object({
+  "id": zod.number(),
+  "companyName": zod.string(),
+  "nickname": zod.string(),
+  "licenseCountry": zod.string(),
+  "operatingCountries": zod.array(zod.string()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Update a supplier (admin only)
+ */
+export const UpdateSupplierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+export const UpdateSupplierBody = zod.object({
+  "companyName": zod.string().min(1).optional(),
+  "nickname": zod.string().min(1).optional(),
+  "licenseCountry": zod.string().min(1).optional(),
+  "operatingCountries": zod.array(zod.string()).optional()
+})
+
+export const UpdateSupplierResponse = zod.object({
+  "id": zod.number(),
+  "companyName": zod.string(),
+  "nickname": zod.string(),
+  "licenseCountry": zod.string(),
+  "operatingCountries": zod.array(zod.string()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Delete a supplier (admin only)
+ */
+export const DeleteSupplierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteSupplierResponse = zod.void()
 
 
 /**
@@ -963,6 +1077,8 @@ export const WhatsappCreateLeadResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -1007,6 +1123,8 @@ export const WhatsappUpdateDealStageResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -1093,6 +1211,8 @@ export const WhatsappGetClientByPhoneResponse = zod.object({
   "contractEndDate": zod.coerce.date().nullish(),
   "clientName": zod.string().nullish(),
   "ownerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }))

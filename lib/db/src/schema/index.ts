@@ -3,3 +3,4 @@ export * from "./clients";
 export * from "./deals";
 export * from "./ad-accounts";
 export * from "./activities";
+export * from "./suppliers";

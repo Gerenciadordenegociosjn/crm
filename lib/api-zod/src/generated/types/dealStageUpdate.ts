@@ -10,4 +10,5 @@ import type { DealStageUpdateStage } from './dealStageUpdateStage';
 export interface DealStageUpdate {
   stage: DealStageUpdateStage;
   reason?: string;
+  supplierId?: number | null;
 }

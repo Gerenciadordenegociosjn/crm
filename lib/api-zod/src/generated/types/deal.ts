@@ -60,6 +60,10 @@ export interface Deal {
   clientName?: string | null;
   /** @nullable */
   ownerName?: string | null;
+  /** @nullable */
+  supplierId?: number | null;
+  /** @nullable */
+  supplierName?: string | null;
   createdAt: Date;
   /** @nullable */
   updatedAt?: Date | null;

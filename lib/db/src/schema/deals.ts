@@ -37,6 +37,8 @@ export const dealsTable = pgTable("deals", {
   // Pipeline mensal
   activeMonth: text("active_month"),  // "YYYY-MM" – preenchido ao entrar em 'ativo'
   churnMonth: text("churn_month"),    // "YYYY-MM" – preenchido ao entrar em 'encerrado'
+  // Fornecedor selecionado ao ativar o deal
+  supplierId: integer("supplier_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(() => new Date()),
 });

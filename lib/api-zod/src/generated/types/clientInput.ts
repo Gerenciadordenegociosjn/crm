@@ -17,4 +17,5 @@ export interface ClientInput {
   notes?: string;
   status?: string;
   externalId?: string;
+  assignedSalesId?: number | null;
 }

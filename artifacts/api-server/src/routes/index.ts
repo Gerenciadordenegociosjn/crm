@@ -8,6 +8,7 @@ import activitiesRouter from "./activities";
 import adAccountsRouter from "./ad-accounts";
 import dashboardRouter from "./dashboard";
 import integrationsRouter from "./integrations";
+import suppliersRouter from "./suppliers";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(activitiesRouter);
 router.use(adAccountsRouter);
 router.use(dashboardRouter);
 router.use(integrationsRouter);
+router.use(suppliersRouter);
 
 export default router;

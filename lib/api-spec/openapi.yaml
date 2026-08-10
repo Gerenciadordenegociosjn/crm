@@ -26,6 +26,8 @@ tags:
     description: Dashboard & reports
   - name: integrations
     description: WhatsApp/AI integrations
+  - name: suppliers
+    description: Supplier management
 
 paths:
   /healthz:
@@ -764,6 +766,113 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReportData"
 
+  # Suppliers
+  /suppliers:
+    get:
+      operationId: listSuppliers
+      tags: [suppliers]
+      summary: List all suppliers
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of suppliers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Supplier"
+
+    post:
+      operationId: createSupplier
+      tags: [suppliers]
+      summary: Create a new supplier (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+
+  /suppliers/{id}:
+    get:
+      operationId: getSupplier
+      tags: [suppliers]
+      summary: Get a supplier by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateSupplier
+      tags: [suppliers]
+      summary: Update a supplier (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierUpdate"
+      responses:
+        "200":
+          description: Updated supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+
+    delete:
+      operationId: deleteSupplier
+      tags: [suppliers]
+      summary: Delete a supplier (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   # WhatsApp Integration
   /integrations/whatsapp/leads:
     post:
@@ -1158,6 +1267,10 @@ components:
           type: ["string", "null"]
         ownerName:
           type: ["string", "null"]
+        supplierId:
+          type: ["integer", "null"]
+        supplierName:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -1289,6 +1402,9 @@ components:
           enum: [lead_captado, qualificacao, proposta, negociacao, fechamento, onboarding, ativo, renovacao, encerrado]
         reason:
           type: string
+        supplierId:
+          type: integer
+          nullable: true
 
     DealListResponse:
       type: object
@@ -1541,6 +1657,65 @@ components:
                 type: string
               count:
                 type: integer
+
+    # Suppliers
+    Supplier:
+      type: object
+      required: [id, companyName, nickname, licenseCountry, operatingCountries, createdAt]
+      properties:
+        id:
+          type: integer
+        companyName:
+          type: string
+        nickname:
+          type: string
+        licenseCountry:
+          type: string
+        operatingCountries:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    SupplierInput:
+      type: object
+      required: [companyName, nickname, licenseCountry]
+      properties:
+        companyName:
+          type: string
+          minLength: 1
+        nickname:
+          type: string
+          minLength: 1
+        licenseCountry:
+          type: string
+          minLength: 1
+        operatingCountries:
+          type: array
+          items:
+            type: string
+
+    SupplierUpdate:
+      type: object
+      properties:
+        companyName:
+          type: string
+          minLength: 1
+        nickname:
+          type: string
+          minLength: 1
+        licenseCountry:
+          type: string
+          minLength: 1
+        operatingCountries:
+          type: array
+          items:
+            type: string
 
     # WhatsApp Integration
     WhatsappLeadInput:

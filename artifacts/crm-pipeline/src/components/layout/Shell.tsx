@@ -10,7 +10,8 @@ import {
   Settings, 
   LogOut,
   Menu,
-  CalendarDays
+  CalendarDays,
+  Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +30,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
   if (user?.role === 'admin') {
     navItems.push({ href: '/admin/users', label: 'Usuários', icon: Settings });
+    navItems.push({ href: '/admin/suppliers', label: 'Fornecedores', icon: Building2 });
   }
 
   return (

@@ -115,6 +115,7 @@ export interface ClientInput {
   notes?: string;
   status?: string;
   externalId?: string;
+  assignedSalesId?: number | null;
 }
 
 export interface ClientUpdate {
@@ -127,6 +128,7 @@ export interface ClientUpdate {
   document?: string;
   notes?: string;
   status?: string;
+  assignedSalesId?: number | null;
 }
 
 export interface ClientListResponse {
@@ -217,6 +219,10 @@ export interface Deal {
   clientName?: string | null;
   /** @nullable */
   ownerName?: string | null;
+  /** @nullable */
+  supplierId?: number | null;
+  /** @nullable */
+  supplierName?: string | null;
   createdAt: string;
   /** @nullable */
   updatedAt?: string | null;
@@ -380,6 +386,7 @@ export const DealStageUpdateStage = {
 export interface DealStageUpdate {
   stage: DealStageUpdateStage;
   reason?: string;
+  supplierId?: number | null;
 }
 
 export interface DealListResponse {
@@ -539,6 +546,37 @@ export interface ReportData {
   closedValue?: number;
   avgTicket: number;
   churnReasons: ReportDataChurnReasonsItem[];
+}
+
+export interface Supplier {
+  id: number;
+  companyName: string;
+  nickname: string;
+  licenseCountry: string;
+  operatingCountries: string[];
+  createdAt: string;
+  /** @nullable */
+  updatedAt?: string | null;
+}
+
+export interface SupplierInput {
+  /** @minLength 1 */
+  companyName: string;
+  /** @minLength 1 */
+  nickname: string;
+  /** @minLength 1 */
+  licenseCountry: string;
+  operatingCountries?: string[];
+}
+
+export interface SupplierUpdate {
+  /** @minLength 1 */
+  companyName?: string;
+  /** @minLength 1 */
+  nickname?: string;
+  /** @minLength 1 */
+  licenseCountry?: string;
+  operatingCountries?: string[];
 }
 
 export interface WhatsappLeadInput {
