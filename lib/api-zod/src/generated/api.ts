@@ -193,7 +193,8 @@ export const CreateClientBody = zod.object({
   "document": zod.string().optional(),
   "notes": zod.string().optional(),
   "status": zod.string().optional(),
-  "externalId": zod.string().optional()
+  "externalId": zod.string().optional(),
+  "assignedSalesId": zod.number().nullable().optional()
 })
 
 export const CreateClientResponse = zod.object({
@@ -298,7 +299,8 @@ export const UpdateClientBody = zod.object({
   "email": zod.string().optional(),
   "document": zod.string().optional(),
   "notes": zod.string().optional(),
-  "status": zod.string().optional()
+  "status": zod.string().optional(),
+  "assignedSalesId": zod.number().nullable().optional()
 })
 
 export const UpdateClientResponse = zod.object({

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useListClients, useCreateClient, getListClientsQueryKey, useListUsers } from '@workspace/api-client-react';
+import { useListClients, useCreateClient, useCreateDeal, getListClientsQueryKey, useListUsers } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,18 @@ import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { PlusCircle, Search, ArrowRight, User } from 'lucide-react';
 
+const PIPELINE_STAGES = [
+  { value: 'lead_captado',  label: 'Lead Captado' },
+  { value: 'qualificacao',  label: 'Qualificação' },
+  { value: 'proposta',      label: 'Proposta' },
+  { value: 'negociacao',    label: 'Negociação' },
+  { value: 'fechamento',    label: 'Fechamento' },
+  { value: 'onboarding',    label: 'Onboarding' },
+  { value: 'ativo',         label: 'Ativo' },
+  { value: 'renovacao',     label: 'Renovação' },
+  { value: 'encerrado',     label: 'Encerrado' },
+];
+
 const clientSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email('E-mail inválido').optional().or(z.literal('')),
@@ -25,6 +37,7 @@ const clientSchema = z.object({
   type: z.string().optional(),
   status: z.string().default('ativo'),
   assignedSalesId: z.coerce.number().optional().nullable(),
+  initialStage: z.string().min(1, 'Etapa é obrigatória'),
 });
 
 export default function ClientsPage() {
@@ -46,19 +59,40 @@ export default function ClientsPage() {
   } as any);
   
   const createClient = useCreateClient();
+  const createDeal = useCreateDeal();
 
   const form = useForm<z.infer<typeof clientSchema>>({
     resolver: zodResolver(clientSchema),
-    defaultValues: { name: '', email: '', phone: '', document: '', type: 'Pessoa Jurídica', status: 'ativo', assignedSalesId: null }
+    defaultValues: { name: '', email: '', phone: '', document: '', type: 'Pessoa Jurídica', status: 'ativo', assignedSalesId: null, initialStage: 'lead_captado' }
   });
 
   const onSubmit = (data: z.infer<typeof clientSchema>) => {
-    createClient.mutate({ data: data as any }, {
-      onSuccess: () => {
-        toast({ title: 'Cliente criado com sucesso' });
-        queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
-        setIsNewModalOpen(false);
-        form.reset();
+    const { initialStage, ...clientData } = data;
+    createClient.mutate({ data: clientData as any }, {
+      onSuccess: (newClient: any) => {
+        // Create a deal linked to this client in the selected stage
+        createDeal.mutate({
+          data: {
+            title: clientData.name,
+            clientId: newClient.id,
+            stage: initialStage as any,
+            ...(clientData.assignedSalesId ? { ownerId: clientData.assignedSalesId } : {}),
+          }
+        }, {
+          onSuccess: () => {
+            toast({ title: 'Cliente e negócio criados com sucesso' });
+            queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
+            setIsNewModalOpen(false);
+            form.reset();
+          },
+          onError: () => {
+            // Client was created; deal failed — still show success for the client
+            toast({ title: 'Cliente criado', description: 'Não foi possível criar o negócio automaticamente.', variant: 'destructive' });
+            queryClient.invalidateQueries({ queryKey: getListClientsQueryKey() });
+            setIsNewModalOpen(false);
+            form.reset();
+          }
+        });
       },
       onError: (err) => {
         toast({ title: 'Erro ao criar cliente', description: err.message, variant: 'destructive' });
@@ -116,8 +150,26 @@ export default function ClientsPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
+                <FormField control={form.control} name="initialStage" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Etapa inicial no Pipeline</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Selecione a etapa" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {PIPELINE_STAGES.map(s => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <div className="flex justify-end pt-4">
-                  <Button type="submit" disabled={createClient.isPending}>{createClient.isPending ? 'Salvando...' : 'Salvar'}</Button>
+                  <Button type="submit" disabled={createClient.isPending || createDeal.isPending}>
+                    {(createClient.isPending || createDeal.isPending) ? 'Salvando...' : 'Salvar'}
+                  </Button>
                 </div>
               </form>
             </Form>

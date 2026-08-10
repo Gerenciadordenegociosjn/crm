@@ -1037,6 +1037,9 @@ components:
           type: string
         externalId:
           type: string
+        assignedSalesId:
+          type: integer
+          nullable: true
 
     ClientUpdate:
       type: object
@@ -1058,6 +1061,9 @@ components:
           type: string
         status:
           type: string
+        assignedSalesId:
+          type: integer
+          nullable: true
 
     ClientListResponse:
       type: object
