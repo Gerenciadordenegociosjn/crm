@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, adAccountsTable, clientsTable, suppliersTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import {
   CreateAdAccountBody,
   UpdateAdAccountBody,
@@ -28,7 +28,7 @@ async function enrichAdAccount(acc: typeof adAccountsTable.$inferSelect) {
   };
 }
 
-router.get("/ad-accounts", requireAuth, async (req, res): Promise<void> => {
+router.get("/ad-accounts", requireAuth, async (req: any, res): Promise<void> => {
   const query = ListAdAccountsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -39,6 +39,16 @@ router.get("/ad-accounts", requireAuth, async (req, res): Promise<void> => {
   const offset = (page - 1) * limit;
 
   const conditions: any[] = [];
+
+  // Sales users can only see ad accounts for their own clients
+  if (req.userRole === "sales") {
+    const ownedClientIds = db
+      .select({ id: clientsTable.id })
+      .from(clientsTable)
+      .where(eq(clientsTable.assignedSalesId, req.userId));
+    conditions.push(inArray(adAccountsTable.clientId, ownedClientIds));
+  }
+
   if (client_id) conditions.push(eq(adAccountsTable.clientId, client_id));
   if (platform) conditions.push(eq(adAccountsTable.platform, platform));
   if (status) conditions.push(eq(adAccountsTable.status, status));
@@ -98,7 +108,7 @@ router.post("/ad-accounts", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(await enrichAdAccount(acc));
 });
 
-router.get("/ad-accounts/:id", requireAuth, async (req, res): Promise<void> => {
+router.get("/ad-accounts/:id", requireAuth, async (req: any, res): Promise<void> => {
   const params = GetAdAccountParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -111,10 +121,26 @@ router.get("/ad-accounts/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  // Sales users can only view accounts for their own clients
+  if (req.userRole === "sales") {
+    if (!acc.clientId) {
+      res.status(404).json({ error: "Ad account not found" });
+      return;
+    }
+    const [client] = await db
+      .select({ id: clientsTable.id })
+      .from(clientsTable)
+      .where(and(eq(clientsTable.id, acc.clientId), eq(clientsTable.assignedSalesId, req.userId)));
+    if (!client) {
+      res.status(404).json({ error: "Ad account not found" });
+      return;
+    }
+  }
+
   res.json(await enrichAdAccount(acc));
 });
 
-router.patch("/ad-accounts/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/ad-accounts/:id", requireAuth, async (req: any, res): Promise<void> => {
   const params = UpdateAdAccountParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -125,6 +151,51 @@ router.patch("/ad-accounts/:id", requireAuth, async (req, res): Promise<void> =>
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
+  }
+
+  // For sales users, verify the account belongs to one of their clients
+  // and that any requested clientId reassignment also targets their own client
+  if (req.userRole === "sales") {
+    const [existing] = await db
+      .select({ clientId: adAccountsTable.clientId })
+      .from(adAccountsTable)
+      .where(eq(adAccountsTable.id, params.data.id));
+
+    if (!existing) {
+      res.status(404).json({ error: "Ad account not found" });
+      return;
+    }
+
+    // Current client must belong to this sales user
+    if (existing.clientId) {
+      const [client] = await db
+        .select({ id: clientsTable.id })
+        .from(clientsTable)
+        .where(and(eq(clientsTable.id, existing.clientId), eq(clientsTable.assignedSalesId, req.userId)));
+
+      if (!client) {
+        res.status(403).json({ error: "Acesso negado" });
+        return;
+      }
+    } else {
+      // Account has no client — sales users cannot edit unassigned accounts
+      res.status(403).json({ error: "Acesso negado" });
+      return;
+    }
+
+    // If a new clientId is being set, it must also belong to this sales user
+    const pd = parsed.data as any;
+    if (pd.clientId != null && pd.clientId !== existing.clientId) {
+      const [targetClient] = await db
+        .select({ id: clientsTable.id })
+        .from(clientsTable)
+        .where(and(eq(clientsTable.id, pd.clientId), eq(clientsTable.assignedSalesId, req.userId)));
+
+      if (!targetClient) {
+        res.status(403).json({ error: "Acesso negado" });
+        return;
+      }
+    }
   }
 
   const pd = parsed.data as any;
