@@ -8,6 +8,7 @@ import { Shell } from '@/components/layout/Shell';
 
 // Pages
 import LoginPage from '@/pages/login';
+import ResetPasswordPage from '@/pages/reset-password';
 import PipelinePage from '@/pages/pipeline';
 import MonthlyPipelinePage from '@/pages/pipeline-mensal';
 import DealDetailPage from '@/pages/deals/[id]';
@@ -45,6 +46,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/" component={() => <ProtectedRoute component={PipelinePage} />} />
       <Route path="/pipeline-mensal" component={() => <ProtectedRoute component={MonthlyPipelinePage} />} />
       <Route path="/deals/:id" component={() => <ProtectedRoute component={DealDetailPage} />} />
