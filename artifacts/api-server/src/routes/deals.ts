@@ -15,6 +15,10 @@ import { requireAuth } from "./auth";
 
 const router: IRouter = Router();
 
+function canAccessDeal(req: any, deal: { ownerId: number | null }): boolean {
+  return req.userRole !== "sales" || deal.ownerId === req.userId;
+}
+
 async function enrichDeal(deal: typeof dealsTable.$inferSelect) {
   const [client] = deal.clientId
     ? await db.select({ name: clientsTable.name }).from(clientsTable).where(eq(clientsTable.id, deal.clientId))
@@ -109,9 +113,9 @@ router.post("/deals", requireAuth, async (req: any, res): Promise<void> => {
 
   const d = parsed.data as any;
 
-  // Auto-populate ownerId from client's assignedSalesId when not explicitly provided
-  let resolvedOwnerId = d.ownerId ?? null;
-  if (!resolvedOwnerId && d.clientId) {
+  // Sales reps always own the deals they create — ignore any ownerId in the body
+  let resolvedOwnerId = req.userRole === "sales" ? req.userId : (d.ownerId ?? null);
+  if (req.userRole !== "sales" && !resolvedOwnerId && d.clientId) {
     const [client] = await db
       .select({ assignedSalesId: clientsTable.assignedSalesId })
       .from(clientsTable)
@@ -141,7 +145,7 @@ router.post("/deals", requireAuth, async (req: any, res): Promise<void> => {
   res.status(201).json(await enrichDeal(deal));
 });
 
-router.get("/deals/:id", requireAuth, async (req, res): Promise<void> => {
+router.get("/deals/:id", requireAuth, async (req: any, res): Promise<void> => {
   const params = GetDealParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -149,7 +153,7 @@ router.get("/deals/:id", requireAuth, async (req, res): Promise<void> => {
   }
 
   const [deal] = await db.select().from(dealsTable).where(eq(dealsTable.id, params.data.id));
-  if (!deal) {
+  if (!deal || !canAccessDeal(req, deal)) {
     res.status(404).json({ error: "Deal not found" });
     return;
   }
@@ -172,7 +176,7 @@ router.get("/deals/:id", requireAuth, async (req, res): Promise<void> => {
   res.json({ deal: await enrichDeal(deal), activities });
 });
 
-router.patch("/deals/:id", requireAuth, async (req, res): Promise<void> => {
+router.patch("/deals/:id", requireAuth, async (req: any, res): Promise<void> => {
   const params = UpdateDealParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -185,7 +189,15 @@ router.patch("/deals/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  const [existing] = await db.select().from(dealsTable).where(eq(dealsTable.id, params.data.id));
+  if (!existing || !canAccessDeal(req, existing)) {
+    res.status(404).json({ error: "Deal not found" });
+    return;
+  }
+
   const pd = parsed.data as any;
+  // Sales reps cannot transfer ownership of their deals
+  if (req.userRole === "sales") delete pd.ownerId;
   const updateData = {
     ...pd,
     estimatedValue: pd.estimatedValue?.toString(),
@@ -209,18 +221,20 @@ router.patch("/deals/:id", requireAuth, async (req, res): Promise<void> => {
   res.json(await enrichDeal(deal));
 });
 
-router.delete("/deals/:id", requireAuth, async (req, res): Promise<void> => {
+router.delete("/deals/:id", requireAuth, async (req: any, res): Promise<void> => {
   const params = DeleteDealParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
-  const [deal] = await db.delete(dealsTable).where(eq(dealsTable.id, params.data.id)).returning();
-  if (!deal) {
+  const [existing] = await db.select().from(dealsTable).where(eq(dealsTable.id, params.data.id));
+  if (!existing || !canAccessDeal(req, existing)) {
     res.status(404).json({ error: "Deal not found" });
     return;
   }
+
+  await db.delete(dealsTable).where(eq(dealsTable.id, params.data.id));
 
   res.sendStatus(204);
 });
@@ -239,7 +253,7 @@ router.patch("/deals/:id/stage", requireAuth, async (req: any, res): Promise<voi
   }
 
   const [existingDeal] = await db.select().from(dealsTable).where(eq(dealsTable.id, params.data.id));
-  if (!existingDeal) {
+  if (!existingDeal || !canAccessDeal(req, existingDeal)) {
     res.status(404).json({ error: "Deal not found" });
     return;
   }
