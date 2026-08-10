@@ -147,6 +147,21 @@ export default function ClientDetailPage() {
                   <FormField control={form.control} name="document" render={({ field }) => (
                     <FormItem><FormLabel>CPF / CNPJ</FormLabel><FormControl><Input {...field} className="font-mono" /></FormControl><FormMessage /></FormItem>
                   )} />
+                  <FormField control={form.control} name="status" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select value={field.value || 'ativo'} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Selecione o status" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ativo">Ativo</SelectItem>
+                          <SelectItem value="inativo">Inativo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                   <FormField control={form.control} name="assignedSalesId" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Vendedor Responsável</FormLabel>

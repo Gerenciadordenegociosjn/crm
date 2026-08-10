@@ -37,7 +37,7 @@ const clientSchema = z.object({
   type: z.string().optional(),
   status: z.string().default('ativo'),
   assignedSalesId: z.coerce.number().optional().nullable(),
-  initialStage: z.string().min(1, 'Etapa é obrigatória'),
+  initialStage: z.string().optional().default('lead_captado'),
 });
 
 export default function ClientsPage() {
