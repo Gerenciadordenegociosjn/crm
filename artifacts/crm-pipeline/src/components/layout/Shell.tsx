@@ -12,6 +12,7 @@ import {
   Menu,
   CalendarDays,
   Building2,
+  HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -31,6 +32,7 @@ export function Shell({ children }: { children: ReactNode }) {
       { href: '/admin/users', label: 'Usuários', icon: Settings },
       { href: '/admin/suppliers', label: 'Fornecedores', icon: Building2 },
     ] : []),
+    { href: '/ajuda', label: 'Ajuda', icon: HelpCircle },
   ];
 
   return (

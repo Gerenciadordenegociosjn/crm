@@ -18,6 +18,7 @@ import AdAccountsPage from '@/pages/ad-accounts';
 import ReportsPage from '@/pages/reports';
 import UsersPage from '@/pages/admin/users';
 import SuppliersPage from '@/pages/admin/suppliers';
+import AjudaPage from '@/pages/ajuda';
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={UsersPage} adminOnly />} />
       <Route path="/admin/suppliers" component={() => <ProtectedRoute component={SuppliersPage} adminOnly />} />
+      <Route path="/ajuda" component={() => <ProtectedRoute component={AjudaPage} />} />
       <Route component={() => <ProtectedRoute component={NotFound} />} />
     </Switch>
   );
