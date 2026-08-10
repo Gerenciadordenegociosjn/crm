@@ -21,3 +21,12 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+APP_URL = "https://mapey.com.br"
+SMTP_FROM = "Mapey CRM <gestao@mapey.com.br>"
+SMTP_HOST = "smtps.uhserver.com"
+SMTP_PORT = "465"
+SMTP_USER = "gestao@mapey.com.br"
