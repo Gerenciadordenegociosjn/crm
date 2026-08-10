@@ -276,6 +276,8 @@ export const GetClientResponse = zod.object({
   "accountIdentifier": zod.string(),
   "monthlyLimit": zod.number().nullish(),
   "status": zod.enum(['ativa', 'bloqueada', 'em_revisao', 'encerrada']),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "startDate": zod.coerce.date().nullish(),
   "endDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
@@ -700,6 +702,8 @@ export const ListAdAccountsResponse = zod.object({
   "accountIdentifier": zod.string(),
   "monthlyLimit": zod.number().nullish(),
   "status": zod.enum(['ativa', 'bloqueada', 'em_revisao', 'encerrada']),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "startDate": zod.coerce.date().nullish(),
   "endDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
@@ -723,6 +727,7 @@ export const CreateAdAccountBody = zod.object({
   "accountIdentifier": zod.string().min(1),
   "monthlyLimit": zod.number().optional(),
   "status": zod.enum(['ativa', 'bloqueada', 'em_revisao', 'encerrada']),
+  "supplierId": zod.number().nullish(),
   "startDate": zod.coerce.date().optional(),
   "endDate": zod.coerce.date().optional()
 })
@@ -735,6 +740,8 @@ export const CreateAdAccountResponse = zod.object({
   "accountIdentifier": zod.string(),
   "monthlyLimit": zod.number().nullish(),
   "status": zod.enum(['ativa', 'bloqueada', 'em_revisao', 'encerrada']),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "startDate": zod.coerce.date().nullish(),
   "endDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
@@ -756,6 +763,8 @@ export const GetAdAccountResponse = zod.object({
   "accountIdentifier": zod.string(),
   "monthlyLimit": zod.number().nullish(),
   "status": zod.enum(['ativa', 'bloqueada', 'em_revisao', 'encerrada']),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "startDate": zod.coerce.date().nullish(),
   "endDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
@@ -775,6 +784,7 @@ export const UpdateAdAccountBody = zod.object({
   "accountIdentifier": zod.string().optional(),
   "monthlyLimit": zod.number().optional(),
   "status": zod.enum(['ativa', 'bloqueada', 'em_revisao', 'encerrada']).optional(),
+  "supplierId": zod.number().nullish(),
   "startDate": zod.coerce.date().optional(),
   "endDate": zod.coerce.date().optional()
 })
@@ -787,6 +797,8 @@ export const UpdateAdAccountResponse = zod.object({
   "accountIdentifier": zod.string(),
   "monthlyLimit": zod.number().nullish(),
   "status": zod.enum(['ativa', 'bloqueada', 'em_revisao', 'encerrada']),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
   "startDate": zod.coerce.date().nullish(),
   "endDate": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()

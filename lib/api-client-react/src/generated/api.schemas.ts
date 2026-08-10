@@ -250,6 +250,10 @@ export interface AdAccount {
   monthlyLimit?: number | null;
   status: AdAccountStatus;
   /** @nullable */
+  supplierId?: number | null;
+  /** @nullable */
+  supplierName?: string | null;
+  /** @nullable */
   startDate?: string | null;
   /** @nullable */
   endDate?: string | null;
@@ -478,6 +482,7 @@ export interface AdAccountInput {
   accountIdentifier: string;
   monthlyLimit?: number;
   status: AdAccountInputStatus;
+  supplierId?: number | null;
   startDate?: string;
   endDate?: string;
 }
@@ -498,6 +503,7 @@ export interface AdAccountUpdate {
   accountIdentifier?: string;
   monthlyLimit?: number;
   status?: AdAccountUpdateStatus;
+  supplierId?: number | null;
   startDate?: string;
   endDate?: string;
 }

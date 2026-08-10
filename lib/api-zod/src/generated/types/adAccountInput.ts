@@ -15,6 +15,7 @@ export interface AdAccountInput {
   accountIdentifier: string;
   monthlyLimit?: number;
   status: AdAccountInputStatus;
+  supplierId?: number | null;
   startDate?: Date;
   endDate?: Date;
 }

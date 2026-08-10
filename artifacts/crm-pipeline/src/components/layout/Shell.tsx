@@ -26,7 +26,6 @@ export function Shell({ children }: { children: ReactNode }) {
     { href: '/', label: 'Pipeline', icon: Briefcase },
     { href: '/pipeline-mensal', label: 'Pipeline Mensal', icon: CalendarDays },
     { href: '/clients', label: 'Clientes', icon: Users },
-    ...(isAdmin ? [{ href: '/ad-accounts', label: 'Contas de Anúncio', icon: CreditCard }] : []),
     { href: '/reports', label: 'Relatórios', icon: BarChart },
     ...(isAdmin ? [
       { href: '/admin/users', label: 'Usuários', icon: Settings },

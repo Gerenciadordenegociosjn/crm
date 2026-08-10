@@ -19,6 +19,10 @@ export interface AdAccount {
   monthlyLimit?: number | null;
   status: AdAccountStatus;
   /** @nullable */
+  supplierId?: number | null;
+  /** @nullable */
+  supplierName?: string | null;
+  /** @nullable */
   startDate?: Date | null;
   /** @nullable */
   endDate?: Date | null;

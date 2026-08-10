@@ -1508,6 +1508,10 @@ components:
         status:
           type: string
           enum: [ativa, bloqueada, em_revisao, encerrada]
+        supplierId:
+          type: ["integer", "null"]
+        supplierName:
+          type: ["string", "null"]
         startDate:
           type: ["string", "null"]
           format: date
@@ -1535,6 +1539,9 @@ components:
         status:
           type: string
           enum: [ativa, bloqueada, em_revisao, encerrada]
+        supplierId:
+          type: integer
+          nullable: true
         startDate:
           type: string
           format: date
@@ -1556,6 +1563,9 @@ components:
         status:
           type: string
           enum: [ativa, bloqueada, em_revisao, encerrada]
+        supplierId:
+          type: integer
+          nullable: true
         startDate:
           type: string
           format: date

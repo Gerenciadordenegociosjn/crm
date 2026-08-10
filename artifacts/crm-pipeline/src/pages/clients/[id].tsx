@@ -1,6 +1,22 @@
 import { useParams } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
-import { useGetClient, useUpdateClient, getGetClientQueryKey, useListUsers } from '@workspace/api-client-react';
+import {
+  useGetClient,
+  useUpdateClient,
+  getGetClientQueryKey,
+  useListUsers,
+  useListSuppliers,
+  useCreateAdAccount,
+  useUpdateAdAccount,
+  useDeleteAdAccount,
+} from '@workspace/api-client-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,12 +28,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, Briefcase, CreditCard, Mail, Phone, MapPin, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Briefcase, CreditCard, Mail, Phone, MapPin, User as UserIcon, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency, formatDate } from '@/lib/utils';
+
+const adAccountSchema = z.object({
+  platform: z.string().min(1, 'Plataforma é obrigatória'),
+  accountIdentifier: z.string().min(1, 'Identificador é obrigatório'),
+  monthlyLimit: z.coerce.number().optional(),
+  status: z.enum(['ativa', 'bloqueada', 'em_revisao', 'encerrada']),
+  supplierId: z.coerce.number().optional().nullable(),
+});
+type AdAccountData = z.infer<typeof adAccountSchema>;
 
 const updateClientSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -44,6 +69,76 @@ export default function ClientDetailPage() {
 
   const { data: detailData, isLoading } = useGetClient(clientId, { query: { enabled: !!clientId, queryKey: getGetClientQueryKey(clientId) } });
   const updateClient = useUpdateClient();
+
+  // ── Ad account management ──────────────────────────────────────────────────
+  const { data: suppliers = [] } = useListSuppliers();
+  const createAdAccount = useCreateAdAccount();
+  const updateAdAccount = useUpdateAdAccount();
+  const deleteAdAccount = useDeleteAdAccount();
+  const [adModalOpen, setAdModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<any | null>(null);
+
+  const adForm = useForm<AdAccountData>({
+    resolver: zodResolver(adAccountSchema),
+    defaultValues: { platform: '', accountIdentifier: '', monthlyLimit: undefined, status: 'ativa', supplierId: null },
+  });
+
+  const openNewAccount = () => {
+    setEditingAccount(null);
+    adForm.reset({ platform: '', accountIdentifier: '', monthlyLimit: undefined, status: 'ativa', supplierId: null });
+    setAdModalOpen(true);
+  };
+
+  const openEditAccount = (acc: any) => {
+    setEditingAccount(acc);
+    adForm.reset({
+      platform: acc.platform || '',
+      accountIdentifier: acc.accountIdentifier || '',
+      monthlyLimit: acc.monthlyLimit ?? undefined,
+      status: acc.status || 'ativa',
+      supplierId: acc.supplierId ?? null,
+    });
+    setAdModalOpen(true);
+  };
+
+  const onSubmitAdAccount = (data: AdAccountData) => {
+    const payload: any = {
+      platform: data.platform,
+      accountIdentifier: data.accountIdentifier,
+      status: data.status,
+    };
+    if (data.monthlyLimit !== undefined && !Number.isNaN(data.monthlyLimit)) payload.monthlyLimit = data.monthlyLimit;
+    if (data.supplierId) payload.supplierId = data.supplierId;
+
+    const opts = {
+      onSuccess: () => {
+        toast({ title: editingAccount ? 'Conta atualizada' : 'Conta incluída' });
+        queryClient.invalidateQueries({ queryKey: getGetClientQueryKey(clientId) });
+        setAdModalOpen(false);
+        setEditingAccount(null);
+      },
+      onError: (err: any) =>
+        toast({ title: 'Erro ao salvar conta', description: err.message, variant: 'destructive' }),
+    };
+
+    if (editingAccount) {
+      updateAdAccount.mutate({ id: editingAccount.id, data: payload }, opts);
+    } else {
+      createAdAccount.mutate({ data: { ...payload, clientId } }, opts);
+    }
+  };
+
+  const onDeleteAccount = (acc: any) => {
+    if (!window.confirm(`Remover a conta ${acc.accountIdentifier}?`)) return;
+    deleteAdAccount.mutate({ id: acc.id }, {
+      onSuccess: () => {
+        toast({ title: 'Conta removida' });
+        queryClient.invalidateQueries({ queryKey: getGetClientQueryKey(clientId) });
+      },
+      onError: (err: any) =>
+        toast({ title: 'Erro ao remover', description: err.message, variant: 'destructive' }),
+    });
+  };
 
   const form = useForm<z.infer<typeof updateClientSchema>>({
     resolver: zodResolver(updateClientSchema),
@@ -231,7 +326,12 @@ export default function ClientDetailPage() {
           <Card>
             <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
               <CardTitle className="text-lg flex items-center"><CreditCard className="h-5 w-5 mr-2 text-indigo-600" /> Contas de Anúncio</CardTitle>
-              <Badge variant="outline">{adAccounts.length}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{adAccounts.length}</Badge>
+                <Button size="sm" onClick={openNewAccount}>
+                  <Plus className="h-4 w-4 mr-1" /> Incluir Conta
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -239,25 +339,36 @@ export default function ClientDetailPage() {
                   <TableRow>
                     <TableHead>Identificador</TableHead>
                     <TableHead>Plataforma</TableHead>
-                    <TableHead>Modalidade</TableHead>
+                    <TableHead>Fornecedor</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Limite/Mês</TableHead>
+                    <TableHead className="w-20 text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {adAccounts.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Nenhuma conta de anúncio associada.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Nenhuma conta de anúncio associada.</TableCell></TableRow>
                   ) : adAccounts.map((acc: any) => (
                     <TableRow key={acc.id}>
                       <TableCell className="font-mono text-xs">{acc.accountIdentifier}</TableCell>
                       <TableCell>{acc.platform}</TableCell>
-                      <TableCell className="text-sm">{getRentalLabel(acc.rentalPeriodType)}</TableCell>
+                      <TableCell className="text-sm">{acc.supplierName ?? <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell>
                         <Badge variant={acc.status === 'ativa' ? 'success' : acc.status === 'bloqueada' ? 'destructive' : 'warning'} className="text-[10px] uppercase">
                           {acc.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm">{formatCurrency(acc.monthlyLimit)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditAccount(acc)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDeleteAccount(acc)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -266,6 +377,104 @@ export default function ClientDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* ── Ad Account Modal (create / edit) ─────────────────────────────────── */}
+      <Dialog open={adModalOpen} onOpenChange={(open) => { if (!open) { setAdModalOpen(false); setEditingAccount(null); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingAccount ? 'Alterar Conta de Anúncio' : 'Incluir Conta de Anúncio'}</DialogTitle>
+          </DialogHeader>
+          <Form {...adForm}>
+            <form onSubmit={adForm.handleSubmit(onSubmitAdAccount)} className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={adForm.control} name="platform" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Plataforma</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="Meta Ads">Meta Ads</SelectItem>
+                        <SelectItem value="Google Ads">Google Ads</SelectItem>
+                        <SelectItem value="TikTok Ads">TikTok Ads</SelectItem>
+                        <SelectItem value="Kwai Ads">Kwai Ads</SelectItem>
+                        <SelectItem value="Outra">Outra</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={adForm.control} name="status" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="ativa">Ativa</SelectItem>
+                        <SelectItem value="bloqueada">Bloqueada</SelectItem>
+                        <SelectItem value="em_revisao">Em Revisão</SelectItem>
+                        <SelectItem value="encerrada">Encerrada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={adForm.control} name="accountIdentifier" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Identificador da Conta</FormLabel>
+                  <FormControl><Input placeholder="Ex: act_123456789" className="font-mono" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={adForm.control} name="monthlyLimit" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Limite Mensal (R$)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Ex: 5000"
+                        value={field.value ?? ''}
+                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : e.target.value)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={adForm.control} name="supplierId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fornecedor</FormLabel>
+                    <Select
+                      value={field.value ? String(field.value) : 'none'}
+                      onValueChange={(v) => field.onChange(v === 'none' ? null : Number(v))}
+                    >
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Sem fornecedor</SelectItem>
+                        {suppliers.map((s: any) => (
+                          <SelectItem key={s.id} value={String(s.id)}>{s.companyName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => { setAdModalOpen(false); setEditingAccount(null); }}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createAdAccount.isPending || updateAdAccount.isPending}>
+                  {createAdAccount.isPending || updateAdAccount.isPending
+                    ? 'Salvando...'
+                    : editingAccount ? 'Salvar alterações' : 'Incluir conta'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

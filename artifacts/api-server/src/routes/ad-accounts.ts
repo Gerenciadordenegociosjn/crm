@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, adAccountsTable, clientsTable } from "@workspace/db";
+import { db, adAccountsTable, clientsTable, suppliersTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import {
   CreateAdAccountBody,
@@ -17,10 +17,14 @@ async function enrichAdAccount(acc: typeof adAccountsTable.$inferSelect) {
   const [client] = acc.clientId
     ? await db.select({ name: clientsTable.name }).from(clientsTable).where(eq(clientsTable.id, acc.clientId))
     : [null];
+  const [supplier] = acc.supplierId
+    ? await db.select({ name: suppliersTable.companyName }).from(suppliersTable).where(eq(suppliersTable.id, acc.supplierId))
+    : [null];
   return {
     ...acc,
     monthlyLimit: acc.monthlyLimit ? Number(acc.monthlyLimit) : null,
     clientName: client?.name ?? null,
+    supplierName: supplier?.name ?? null,
   };
 }
 
@@ -52,17 +56,25 @@ router.get("/ad-accounts", requireAuth, async (req, res): Promise<void> => {
     db.select({ count: sql<number>`count(*)` }).from(adAccountsTable).where(whereClause),
   ]);
 
-  // Batch client names
+  // Batch client + supplier names
   const clientIds = [...new Set(raw.map((a) => a.clientId).filter(Boolean))] as number[];
-  const clients = clientIds.length > 0
-    ? await db.select({ id: clientsTable.id, name: clientsTable.name }).from(clientsTable)
-    : [];
+  const supplierIds = [...new Set(raw.map((a) => a.supplierId).filter(Boolean))] as number[];
+  const [clients, suppliers] = await Promise.all([
+    clientIds.length > 0
+      ? db.select({ id: clientsTable.id, name: clientsTable.name }).from(clientsTable)
+      : Promise.resolve([]),
+    supplierIds.length > 0
+      ? db.select({ id: suppliersTable.id, name: suppliersTable.companyName }).from(suppliersTable)
+      : Promise.resolve([]),
+  ]);
   const clientMap = Object.fromEntries(clients.map((c) => [c.id, c.name]));
+  const supplierMap = Object.fromEntries(suppliers.map((s) => [s.id, s.name]));
 
   const data = raw.map((a) => ({
     ...a,
     monthlyLimit: a.monthlyLimit ? Number(a.monthlyLimit) : null,
     clientName: a.clientId ? (clientMap[a.clientId] ?? null) : null,
+    supplierName: a.supplierId ? (supplierMap[a.supplierId] ?? null) : null,
   }));
 
   res.json({ data, total: Number(countResult[0]?.count ?? 0), page, limit });

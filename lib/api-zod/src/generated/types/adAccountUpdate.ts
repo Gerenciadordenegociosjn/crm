@@ -13,6 +13,7 @@ export interface AdAccountUpdate {
   accountIdentifier?: string;
   monthlyLimit?: number;
   status?: AdAccountUpdateStatus;
+  supplierId?: number | null;
   startDate?: Date;
   endDate?: Date;
 }
