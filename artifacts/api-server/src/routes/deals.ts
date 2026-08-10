@@ -37,7 +37,7 @@ async function enrichDeal(deal: typeof dealsTable.$inferSelect) {
   };
 }
 
-router.get("/deals", requireAuth, async (req, res): Promise<void> => {
+router.get("/deals", requireAuth, async (req: any, res): Promise<void> => {
   const query = ListDealsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -47,9 +47,12 @@ router.get("/deals", requireAuth, async (req, res): Promise<void> => {
   const { stage, owner_id, platform, search, page = 1, limit = 50, payment_frequency } = query.data;
   const offset = (page - 1) * limit;
 
+  // Sales reps can only see their own deals — ignore any owner_id from query
+  const effectiveOwnerId = req.userRole === "sales" ? req.userId : owner_id;
+
   const conditions: any[] = [];
   if (stage) conditions.push(eq(dealsTable.stage, stage));
-  if (owner_id) conditions.push(eq(dealsTable.ownerId, owner_id));
+  if (effectiveOwnerId) conditions.push(eq(dealsTable.ownerId, effectiveOwnerId));
   if (platform) conditions.push(eq(dealsTable.platform, platform));
   if (payment_frequency) conditions.push(eq(dealsTable.paymentFrequency, payment_frequency));
   if (search) {

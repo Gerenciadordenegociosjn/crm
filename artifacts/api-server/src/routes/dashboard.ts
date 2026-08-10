@@ -80,7 +80,7 @@ router.get("/dashboard/summary", requireAuth, async (_req, res): Promise<void> =
   });
 });
 
-router.get("/dashboard/pipeline", requireAuth, async (req, res): Promise<void> => {
+router.get("/dashboard/pipeline", requireAuth, async (req: any, res): Promise<void> => {
   const query = GetPipelineBoardQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -89,8 +89,11 @@ router.get("/dashboard/pipeline", requireAuth, async (req, res): Promise<void> =
 
   const { owner_id, platform, search, start_date, end_date } = query.data;
 
+  // Sales reps see only their own deals
+  const effectiveOwnerId = req.userRole === "sales" ? req.userId : owner_id;
+
   const conditions: any[] = [];
-  if (owner_id) conditions.push(eq(dealsTable.ownerId, owner_id));
+  if (effectiveOwnerId) conditions.push(eq(dealsTable.ownerId, effectiveOwnerId));
   if (platform) conditions.push(eq(dealsTable.platform, platform));
   if (search) conditions.push(ilike(dealsTable.title, `%${search}%`));
   if (start_date) conditions.push(gte(dealsTable.createdAt, new Date(start_date)));
@@ -165,7 +168,7 @@ router.get("/dashboard/recent-activity", requireAuth, async (req, res): Promise<
   res.json(activities);
 });
 
-router.get("/dashboard/reports", requireAuth, async (req, res): Promise<void> => {
+router.get("/dashboard/reports", requireAuth, async (req: any, res): Promise<void> => {
   const query = GetReportsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -174,10 +177,24 @@ router.get("/dashboard/reports", requireAuth, async (req, res): Promise<void> =>
 
   const { start_date, end_date } = query.data;
 
-  const dateConditions: any[] = [];
-  if (start_date) dateConditions.push(gte(dealsTable.createdAt, new Date(start_date)));
-  if (end_date) dateConditions.push(lte(dealsTable.createdAt, new Date(end_date)));
-  const dateWhere = dateConditions.length > 0 ? and(...dateConditions) : undefined;
+  const conditions: any[] = [];
+  if (start_date) conditions.push(gte(dealsTable.createdAt, new Date(start_date)));
+  if (end_date) conditions.push(lte(dealsTable.createdAt, new Date(end_date)));
+  // Sales reps see only their own deals in reports
+  if (req.userRole === "sales") conditions.push(eq(dealsTable.ownerId, req.userId));
+  const dateWhere = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const closedConditions: any[] = [
+    or(eq(dealsTable.stage, "fechamento"), eq(dealsTable.stage, "ativo"), eq(dealsTable.stage, "renovacao")),
+  ];
+  if (start_date) closedConditions.push(gte(dealsTable.createdAt, new Date(start_date)));
+  if (end_date) closedConditions.push(lte(dealsTable.createdAt, new Date(end_date)));
+  if (req.userRole === "sales") closedConditions.push(eq(dealsTable.ownerId, req.userId));
+
+  const churnConditions: any[] = [eq(dealsTable.stage, "encerrado")];
+  if (start_date) churnConditions.push(gte(dealsTable.createdAt, new Date(start_date)));
+  if (end_date) churnConditions.push(lte(dealsTable.createdAt, new Date(end_date)));
+  if (req.userRole === "sales") churnConditions.push(eq(dealsTable.ownerId, req.userId));
 
   const [dealsByStageResult, closedResult, churnResult] = await Promise.all([
     db
@@ -196,19 +213,14 @@ router.get("/dashboard/reports", requireAuth, async (req, res): Promise<void> =>
         avg: sql<number>`coalesce(avg(estimated_value::numeric), 0)`,
       })
       .from(dealsTable)
-      .where(
-        and(
-          or(eq(dealsTable.stage, "fechamento"), eq(dealsTable.stage, "ativo"), eq(dealsTable.stage, "renovacao")),
-          dateWhere,
-        ),
-      ),
+      .where(and(...closedConditions)),
     db
       .select({
         reason: dealsTable.rentalStatus,
         count: sql<number>`count(*)`,
       })
       .from(dealsTable)
-      .where(and(eq(dealsTable.stage, "encerrado"), dateWhere))
+      .where(and(...churnConditions))
       .groupBy(dealsTable.rentalStatus),
   ]);
 
@@ -232,7 +244,7 @@ router.get("/dashboard/reports", requireAuth, async (req, res): Promise<void> =>
 });
 
 // GET /dashboard/monthly-pipeline?year=2026&month=7
-router.get("/dashboard/monthly-pipeline", requireAuth, async (req, res): Promise<void> => {
+router.get("/dashboard/monthly-pipeline", requireAuth, async (req: any, res): Promise<void> => {
   const year = parseInt(req.query["year"] as string ?? `${new Date().getFullYear()}`);
   const month = parseInt(req.query["month"] as string ?? `${new Date().getMonth() + 1}`);
 
@@ -243,17 +255,24 @@ router.get("/dashboard/monthly-pipeline", requireAuth, async (req, res): Promise
 
   const ym = `${year}-${String(month).padStart(2, "0")}`;
 
+  // Sales reps see only their own deals
+  const salesFilter = req.userRole === "sales" ? eq(dealsTable.ownerId, req.userId) : undefined;
+
   // Active clients: deals in 'ativo' with activeMonth = ym
   const rawActive = await db
     .select()
     .from(dealsTable)
-    .where(and(eq(dealsTable.stage, "ativo"), eq(dealsTable.activeMonth, ym)));
+    .where(salesFilter
+      ? and(eq(dealsTable.stage, "ativo"), eq(dealsTable.activeMonth, ym), salesFilter)
+      : and(eq(dealsTable.stage, "ativo"), eq(dealsTable.activeMonth, ym)));
 
   // Churn: deals in 'encerrado' with churnMonth = ym
   const rawChurn = await db
     .select()
     .from(dealsTable)
-    .where(and(eq(dealsTable.stage, "encerrado"), eq(dealsTable.churnMonth, ym)));
+    .where(salesFilter
+      ? and(eq(dealsTable.stage, "encerrado"), eq(dealsTable.churnMonth, ym), salesFilter)
+      : and(eq(dealsTable.stage, "encerrado"), eq(dealsTable.churnMonth, ym)));
 
   // Batch-load client and owner names for both sets
   const allDeals = [...rawActive, ...rawChurn];

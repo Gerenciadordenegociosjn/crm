@@ -20,18 +20,19 @@ export function Shell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
+  const isAdmin = user?.role === 'admin';
+
   const navItems = [
     { href: '/', label: 'Pipeline', icon: Briefcase },
     { href: '/pipeline-mensal', label: 'Pipeline Mensal', icon: CalendarDays },
     { href: '/clients', label: 'Clientes', icon: Users },
-    { href: '/ad-accounts', label: 'Contas de Anúncio', icon: CreditCard },
+    ...(isAdmin ? [{ href: '/ad-accounts', label: 'Contas de Anúncio', icon: CreditCard }] : []),
     { href: '/reports', label: 'Relatórios', icon: BarChart },
+    ...(isAdmin ? [
+      { href: '/admin/users', label: 'Usuários', icon: Settings },
+      { href: '/admin/suppliers', label: 'Fornecedores', icon: Building2 },
+    ] : []),
   ];
-
-  if (user?.role === 'admin') {
-    navItems.push({ href: '/admin/users', label: 'Usuários', icon: Settings });
-    navItems.push({ href: '/admin/suppliers', label: 'Fornecedores', icon: Building2 });
-  }
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
