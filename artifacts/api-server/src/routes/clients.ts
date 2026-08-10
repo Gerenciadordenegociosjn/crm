@@ -11,7 +11,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth } from "./auth";
 import { dealsTable } from "@workspace/db";
-import { adAccountsTable } from "@workspace/db";
+import { adAccountsTable, suppliersTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -127,10 +127,22 @@ router.get("/clients/:id", requireAuth, async (req: any, res): Promise<void> => 
     return;
   }
 
-  const [deals, adAccounts] = await Promise.all([
+  const [deals, rawAdAccounts] = await Promise.all([
     db.select().from(dealsTable).where(eq(dealsTable.clientId, params.data.id)).orderBy(dealsTable.createdAt),
     db.select().from(adAccountsTable).where(eq(adAccountsTable.clientId, params.data.id)).orderBy(adAccountsTable.createdAt),
   ]);
+
+  // Enrich ad accounts with supplier names
+  const supplierIds = [...new Set(rawAdAccounts.map((a) => a.supplierId).filter(Boolean))] as number[];
+  const suppliers = supplierIds.length > 0
+    ? await db.select({ id: suppliersTable.id, name: suppliersTable.companyName }).from(suppliersTable)
+    : [];
+  const supplierMap = Object.fromEntries(suppliers.map((s) => [s.id, s.name]));
+  const adAccounts = rawAdAccounts.map((a) => ({
+    ...a,
+    monthlyLimit: a.monthlyLimit ? Number(a.monthlyLimit) : null,
+    supplierName: a.supplierId ? (supplierMap[a.supplierId] ?? null) : null,
+  }));
 
   res.json({ client: await enrichClient(client), deals, adAccounts });
 });

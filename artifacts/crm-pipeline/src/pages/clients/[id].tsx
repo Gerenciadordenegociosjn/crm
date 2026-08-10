@@ -108,7 +108,8 @@ export default function ClientDetailPage() {
       status: data.status,
     };
     if (data.monthlyLimit !== undefined && !Number.isNaN(data.monthlyLimit)) payload.monthlyLimit = data.monthlyLimit;
-    if (data.supplierId) payload.supplierId = data.supplierId;
+    // Send null explicitly so "Sem fornecedor" clears an existing supplier
+    payload.supplierId = data.supplierId ?? null;
 
     const opts = {
       onSuccess: () => {
