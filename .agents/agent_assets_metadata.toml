@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "nkPmpCVjMGSHZP_PW7Sxm"
+uri = "file://artifacts/training-video/public/audio/bg_music.mp3"
+type = "audio"
+title = "background music"
+description = "Generated music: Corporate motivational instrumental background music scoring a professional CRM product training video. Clean electric piano, subtle synth pads, light percussion, 105 BPM, confident …"
