@@ -1,4 +1,5 @@
 import { useParams } from 'wouter';
+import { useAuth } from '@/contexts/AuthContext';
 import { useGetClient, useUpdateClient, getGetClientQueryKey, useListUsers } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,9 @@ const updateClientSchema = z.object({
 });
 
 export default function ClientDetailPage() {
+  const { user } = useAuth();
+  const isSales = user?.role === 'sales';
+
   const { id } = useParams<{ id: string }>();
   const clientId = parseInt(id, 10);
   const { toast } = useToast();
@@ -162,22 +166,24 @@ export default function ClientDetailPage() {
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <FormField control={form.control} name="assignedSalesId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Vendedor Responsável</FormLabel>
-                      <Select value={field.value ? String(field.value) : ''} onValueChange={(v) => field.onChange(Number(v))}>
-                        <FormControl>
-                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {salesUsers.map(u => (
-                            <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                  {!isSales && (
+                    <FormField control={form.control} name="assignedSalesId" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vendedor Responsável</FormLabel>
+                        <Select value={field.value ? String(field.value) : ''} onValueChange={(v) => field.onChange(Number(v))}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {salesUsers.map(u => (
+                              <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
                   <FormField control={form.control} name="notes" render={({ field }) => (
                     <FormItem><FormLabel>Anotações</FormLabel><FormControl><Textarea {...field} rows={4} className="resize-none" /></FormControl><FormMessage /></FormItem>
                   )} />

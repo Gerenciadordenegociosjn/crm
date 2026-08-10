@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useListClients, useCreateClient, useCreateDeal, getListClientsQueryKey, useListUsers } from '@workspace/api-client-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -41,6 +42,9 @@ const clientSchema = z.object({
 });
 
 export default function ClientsPage() {
+  const { user } = useAuth();
+  const isSales = user?.role === 'sales';
+
   const [search, setSearch] = useState('');
   const [salesFilter, setSalesFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
@@ -70,13 +74,17 @@ export default function ClientsPage() {
     const { initialStage, ...clientData } = data;
     createClient.mutate({ data: clientData as any }, {
       onSuccess: (newClient: any) => {
-        // Create a deal linked to this client in the selected stage
+        // For sales: ownerId = themselves; for admin: use the assignedSalesId if set
+        const dealOwnerId = isSales
+          ? (user?.id as number)
+          : (clientData.assignedSalesId ?? undefined);
+
         createDeal.mutate({
           data: {
             title: clientData.name,
             clientId: newClient.id,
             stage: initialStage as any,
-            ...(clientData.assignedSalesId ? { ownerId: clientData.assignedSalesId } : {}),
+            ...(dealOwnerId ? { ownerId: dealOwnerId } : {}),
           }
         }, {
           onSuccess: () => {
@@ -134,22 +142,24 @@ export default function ClientsPage() {
                     <FormItem><FormLabel>Tipo</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
-                <FormField control={form.control} name="assignedSalesId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Vendedor Responsável</FormLabel>
-                    <Select value={field.value ? String(field.value) : ''} onValueChange={(v) => field.onChange(Number(v))}>
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Selecione um vendedor" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {salesUsers.map(user => (
-                          <SelectItem key={user.id} value={String(user.id)}>{user.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                {!isSales && (
+                  <FormField control={form.control} name="assignedSalesId" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vendedor Responsável</FormLabel>
+                      <Select value={field.value ? String(field.value) : ''} onValueChange={(v) => field.onChange(Number(v))}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Selecione um vendedor" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {salesUsers.map(user => (
+                            <SelectItem key={user.id} value={String(user.id)}>{user.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                )}
                 <FormField control={form.control} name="initialStage" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Etapa inicial no Pipeline</FormLabel>
@@ -188,19 +198,21 @@ export default function ClientsPage() {
               className="max-w-sm h-9 border-none bg-transparent shadow-none focus-visible:ring-0 px-0"
             />
           </div>
-          <div className="w-64">
-            <Select value={salesFilter} onValueChange={setSalesFilter}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Filtrar por vendedor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os vendedores</SelectItem>
-                {salesUsers.map(user => (
-                  <SelectItem key={user.id} value={String(user.id)}>{user.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {!isSales && (
+            <div className="w-64">
+              <Select value={salesFilter} onValueChange={setSalesFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Filtrar por vendedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os vendedores</SelectItem>
+                  {salesUsers.map(user => (
+                    <SelectItem key={user.id} value={String(user.id)}>{user.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardHeader>
         <div className="overflow-x-auto">
           <Table>
