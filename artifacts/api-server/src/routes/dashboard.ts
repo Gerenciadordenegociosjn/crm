@@ -18,7 +18,12 @@ const STAGES = [
   "encerrado",
 ];
 
-router.get("/dashboard/summary", requireAuth, async (_req, res): Promise<void> => {
+router.get("/dashboard/summary", requireAuth, async (req: any, res): Promise<void> => {
+  // Sales reps see only their own deals in KPIs
+  const salesFilter = req.userRole === "sales" ? eq(dealsTable.ownerId, req.userId) : undefined;
+
+  const startOfCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
   const [
     totalDealsResult,
     totalClientsResult,
@@ -29,7 +34,7 @@ router.get("/dashboard/summary", requireAuth, async (_req, res): Promise<void> =
     avgTicketResult,
     totalPipelineResult,
   ] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(dealsTable),
+    db.select({ count: sql<number>`count(*)` }).from(dealsTable).where(salesFilter),
     db.select({ count: sql<number>`count(*)` }).from(clientsTable),
     db.select({ count: sql<number>`count(*)` }).from(adAccountsTable),
     db.select({ count: sql<number>`count(*)` }).from(adAccountsTable).where(eq(adAccountsTable.status, "ativa")),
@@ -40,25 +45,40 @@ router.get("/dashboard/summary", requireAuth, async (_req, res): Promise<void> =
         totalValue: sql<number>`coalesce(sum(estimated_value::numeric), 0)`,
       })
       .from(dealsTable)
+      .where(salesFilter)
       .groupBy(dealsTable.stage),
     // closed this month
     db
       .select({ count: sql<number>`count(*)` })
       .from(dealsTable)
       .where(
-        and(
-          or(eq(dealsTable.stage, "fechamento"), eq(dealsTable.stage, "ativo")),
-          gte(dealsTable.updatedAt, new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
-        ),
+        salesFilter
+          ? and(
+              or(eq(dealsTable.stage, "fechamento"), eq(dealsTable.stage, "ativo")),
+              gte(dealsTable.updatedAt, startOfCurrentMonth),
+              salesFilter,
+            )
+          : and(
+              or(eq(dealsTable.stage, "fechamento"), eq(dealsTable.stage, "ativo")),
+              gte(dealsTable.updatedAt, startOfCurrentMonth),
+            ),
       ),
     db
       .select({ avg: sql<number>`coalesce(avg(estimated_value::numeric), 0)` })
       .from(dealsTable)
-      .where(or(eq(dealsTable.stage, "fechamento"), eq(dealsTable.stage, "ativo"), eq(dealsTable.stage, "renovacao"))),
+      .where(
+        salesFilter
+          ? and(or(eq(dealsTable.stage, "fechamento"), eq(dealsTable.stage, "ativo"), eq(dealsTable.stage, "renovacao")), salesFilter)
+          : or(eq(dealsTable.stage, "fechamento"), eq(dealsTable.stage, "ativo"), eq(dealsTable.stage, "renovacao")),
+      ),
     db
       .select({ total: sql<number>`coalesce(sum(estimated_value::numeric), 0)` })
       .from(dealsTable)
-      .where(sql`stage NOT IN ('encerrado')`),
+      .where(
+        salesFilter
+          ? and(sql`stage NOT IN ('encerrado')`, salesFilter)
+          : sql`stage NOT IN ('encerrado')`,
+      ),
   ]);
 
   const stageMap = Object.fromEntries(dealsByStageResult.map((r) => [r.stage, r]));
@@ -139,7 +159,7 @@ router.get("/dashboard/pipeline", requireAuth, async (req: any, res): Promise<vo
   res.json({ stages });
 });
 
-router.get("/dashboard/recent-activity", requireAuth, async (req, res): Promise<void> => {
+router.get("/dashboard/recent-activity", requireAuth, async (req: any, res): Promise<void> => {
   const query = GetRecentActivityQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -147,6 +167,11 @@ router.get("/dashboard/recent-activity", requireAuth, async (req, res): Promise<
   }
 
   const limit = query.data.limit ?? 20;
+
+  // Sales reps see only activities on their own deals
+  const whereClause = req.userRole === "sales"
+    ? eq(dealsTable.ownerId, req.userId)
+    : undefined;
 
   const activities = await db
     .select({
@@ -162,6 +187,7 @@ router.get("/dashboard/recent-activity", requireAuth, async (req, res): Promise<
     .from(activitiesTable)
     .leftJoin(dealsTable, eq(activitiesTable.dealId, dealsTable.id))
     .leftJoin(usersTable, eq(activitiesTable.userId, usersTable.id))
+    .where(whereClause)
     .orderBy(desc(activitiesTable.createdAt))
     .limit(limit);
 
